@@ -1,0 +1,86 @@
+{
+   "rules": {
+      "output_1": {
+         "input_1": "up",
+         "input_2": "constant",
+         "input_3": "none",
+         "input_4": "none"
+      },
+      "output_2": {
+         "input_1": "none",
+         "input_2": "up",
+         "input_3": "constant",
+         "input_4": "none"
+      },
+      "output_3": {
+         "input_1": "none",
+         "input_2": "none",
+         "input_3": "up",
+         "input_4": "down"
+      },
+      "output_4": {
+         "input_1": "none",
+         "input_2": "up",
+         "input_3": "none",
+         "input_4": "up"
+      },
+      "output_5": {
+         "input_1": "none",
+         "input_2": "none",
+         "input_3": "none",
+         "input_4": "constant"
+      }
+   },
+
+   "classification_rules": {
+    "rule_0": [0],
+    "rule_1": [1],
+    "rule_2": [1],
+    "rule_3": [2],
+    "rule_4": [2]
+  },
+
+   "input_names": {
+      "input_1": 0,
+      "input_2": 1,
+      "input_3": 2,
+      "input_4": 3
+   },
+   "member_activations": {
+      "up": [
+         0,
+         0,
+         1
+      ],
+      "down": [
+         1,
+         0,
+         0
+      ],
+      "constant": [
+         0,
+         1,
+         0
+      ],
+      "up_down": [
+         1,
+         0,
+         1
+      ],
+      "up_constant": [
+         0,
+         1,
+         1
+      ],
+      "down_constant": [
+         1,
+         1,
+         0
+      ], 
+	  "none": [
+	  0,
+	  0,
+	  0
+	  ]
+   }
+}

@@ -1,0 +1,93 @@
+{
+  "rules": {
+    "high_quality": {
+      "free_sulfur_dioxide": "high"
+    },
+    "low_quality": {
+      "fixed_acidity": "low"
+    },
+    "and_rule": {
+      "citric_acid": "average",
+      "chlorides": "low"
+    },
+    "complex_rule": {
+      "fixed_acidity": "high",
+      "chlorides": "low",
+      "density": "average",
+      "citric_acid": "average",
+      "residual_sugar": "low"
+    }
+  },
+  
+  "classification_rules": {
+    "high_quality": [
+      2
+    ],
+    "low_quality": [
+      2
+    ],
+    "and_rule": [
+      1
+    ],
+    "complex_rule": [
+      1
+    ]
+  },
+
+  "input_names": {
+    "fixed_acidity": 0,
+    "volatile_acidity": 1,
+    "citric_acid": 2,
+    "residual_sugar": 3,
+    "chlorides": 4,
+    "free_sulfur_dioxide": 5,
+    "total_sulfur_dioxide": 6,
+    "density": 7,
+    "pH": 8,
+    "sulphates": 9,
+    "alcohol": 10
+  },
+
+  "member_activations": {
+    "high": [
+      0,
+      0,
+      1
+    ],
+    "low": [
+      1,
+      0,
+      0
+    ],
+    "average": [
+      0,
+      1,
+      0
+    ],
+    "high_low": [
+      1,
+      0,
+      1
+    ],
+    "high_average": [
+      0,
+      1,
+      1
+    ],
+    "low_average": [
+      1,
+      1,
+      0
+    ],
+    "high_average_low": [
+      1,
+      1,
+      1
+    ],
+    "None": [
+      0,
+      0,
+      0
+    ]
+  }
+}
