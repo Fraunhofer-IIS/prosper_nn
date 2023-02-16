@@ -29,23 +29,23 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    steps: 
+    steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup Pages
         uses: actions/configure-pages@v2
       - name: Create Pages
         run: |
-          - pip install -U sphinx
-          - pip install nbsphinx
-          - pip install sphinx-rtd-theme
-          - pip install pandoc
-          - sphinx-build -b html ./docs/source
+          pip install -U sphinx
+          pip install nbsphinx
+          pip install sphinx-rtd-theme
+          pip install pandoc
+          sphinx-build -b html ./docs/source
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
           # Upload entire repository
-          path: 'docs/source/_build/'
+          path: "docs/source/_build/"
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v1
