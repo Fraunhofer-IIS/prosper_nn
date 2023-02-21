@@ -4,9 +4,9 @@
    contain the root `toctree` directive.
 
 
-#######
+###########
 Prosper\_nn
-#######
+###########
 
 Problem-Specific Pre-Structuring of Neural Networks
 ###################################################
@@ -15,7 +15,7 @@ Accurate data-driven forecasts can provide a crucial advantage in many applicati
 One of the methods with the most promising results in forecasting time series are neural networks.
 However, especially in macro-economic applications,
 it can be difficult and time-consuming to adapt state-of-the-art neural network architectures in a way that leads to satisfying results.
-For instance, the final prices of materials and stocks result from a highly complex interplay between supply and demand. 
+For instance, the final prices of materials and stocks result from a highly complex interplay between supply and demand.
 Additionally, there is often only one (albeit long) historical time series available for training, which makes correlations in the data difficult to detect.
 
 Under these circumstances, applying state-of-the-art neural networks architectures successfully poses a great challenge.
@@ -28,9 +28,9 @@ Therefore, we have implemented the models in PyTorch. This way, we can easily te
 
 In addition to these models for time series forecasting, we have also implemented a fuzzy neural network. This is also a pre-structured model, but this time with the goal of interpretability.
 
-This is the documentation site of this package. It is shown how to `install the package <install/index.rst>`_. 
+This is the documentation site of this package. It is shown how to `install the package <install/index.rst>`_.
 Also we provide an in detail description of the the models and functions in `API References <api/index.rst>`_.
-Furthermore, you can have a look at different `tutorials <tutorials/index.rst>`_ that explain the theory of the models and show how to work with the package to build powerful neural networks. 
+Furthermore, you can have a look at different `tutorials <tutorials/index.rst>`_ that explain the theory of the models and show how to work with the package to build powerful neural networks.
 
 
 .. toctree::
