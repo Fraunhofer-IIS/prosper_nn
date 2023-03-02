@@ -43,7 +43,7 @@ jobs:
           pip install nbsphinx
           pip install sphinx-rtd-theme
           pip install pandoc
-          sphinx-build -b html ./docs/source public
+          sphinx-build -b html ./docs/source docs/source/_build/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
