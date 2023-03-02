@@ -35,6 +35,7 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v2
       - name: Create Pages
+        uses: docker://pandoc/core:2.9
         run: |
           pip install sphinx
           pip install nbsphinx
