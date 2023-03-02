@@ -24,11 +24,8 @@ Propser_nn is free software: you can redistribute it and/or modify
 
 import torch.nn as nn
 import torch
-from typing import Optional, Type, TypeVar
+from typing import Optional, Type
 from ..hcnn.hcnn_cell import HCNNCell
-
-
-T = TypeVar("T", bound="Module")
 
 
 class CRCNN(nn.Module):

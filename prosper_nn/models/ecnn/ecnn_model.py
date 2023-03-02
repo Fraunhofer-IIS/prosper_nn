@@ -326,7 +326,7 @@ class ECNN(torch.nn.Module):
         ):
             raise ValueError(
                 "{} is not a valid string for approach. "
-                'It must be either "backward" or "forward".'.format(batchsize)
+                'It must be either "backward" or "forward".'.format(self.approach)
             )
         if (self.approach == "forward") and (self.past_horizon <= 1):
             raise ValueError(
@@ -336,5 +336,5 @@ class ECNN(torch.nn.Module):
         if type(self.future_U) != bool:
             raise ValueError(
                 "{} is not a valid input for approach. "
-                "It must be boolean.".format(batchsize)
+                "It must be boolean.".format(self.future_U)
             )
