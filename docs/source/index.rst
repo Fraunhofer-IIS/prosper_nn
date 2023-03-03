@@ -28,6 +28,13 @@ Furthermore, you can have a look at different `tutorials <tutorials/index.rst>`_
    authors
    license
 
+
+******************
+Acknowledgments
+******************
+
+This work was supported by the Bavarian Ministry of Economic Affairs, Regional Development and Energy through the Center for Analytics – Data – Applications (ADA-Center) within the framework of „BAYERN DIGITAL II“ (20-3410-2-9-8)
+
 ******************
 Indices and tables
 ******************
