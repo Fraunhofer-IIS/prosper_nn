@@ -48,6 +48,7 @@ jobs:
           pip install numpy
           pip install scipy
           pip install seaborn
+          pip install ipython
           sphinx-build -b html ./docs/source docs/source/_build/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
