@@ -36,13 +36,16 @@ jobs:
         uses: actions/configure-pages@v2
       - uses: r-lib/actions/setup-pandoc@v2
         with:
-          pandoc-version: '2.17.1'
+          pandoc-version: "2.17.1"
       - name: Create Pages
         run: |
           pip install sphinx
           pip install nbsphinx
           pip install sphinx-rtd-theme
           pip install pandoc
+          pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
+          pip install matplotlib
+          pip install numpy
           sphinx-build -b html ./docs/source docs/source/_build/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
