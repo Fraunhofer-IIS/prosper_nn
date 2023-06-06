@@ -26,7 +26,7 @@ import torch.nn as nn
 import torch
 import torch.nn.utils.prune as prune
 from typing import Optional, Type
-from .hcnn_cell import no_dropout_backward
+from .hcnn_cell import no_dropout_backward, PartialTeacherForcing
 
 
 class HCNN_LSTM_Cell(nn.Module):
@@ -76,7 +76,8 @@ class HCNN_LSTM_Cell(nn.Module):
         teacher_forcing : float
             The probability that teacher forcing is applied for a single state neuron.
             In each time this is repeated and therefore enforces stochastic learning
-            if the value is smaller than 1.
+            if the value is smaller than 1. Since not all nodes are corrected then, it is
+            partial teacher forcing (ptf).
         backward_full_Y: bool
             Apply partial teacher forcing dropout after or before the output is calculated.
             If True dropout layer is applied afterwards and the output contains the errors of all features.
@@ -110,7 +111,7 @@ class HCNN_LSTM_Cell(nn.Module):
         self.eye = torch.eye(
             self.n_features_Y, self.n_state_neurons, requires_grad=False
         )
-        self.ptf_dropout = nn.Dropout(1 - self.teacher_forcing)
+        self.ptf_dropout = PartialTeacherForcing(1 - self.teacher_forcing)
         self.LSTM_regulator = nn.Linear(1, n_state_neurons, bias=False)
         nn.init.ones_(self.LSTM_regulator.weight)
 

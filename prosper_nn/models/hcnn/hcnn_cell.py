@@ -21,7 +21,7 @@ Propser_nn is free software: you can redistribute it and/or modify
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-
+from torch import Tensor
 import torch.nn as nn
 import torch
 import torch.nn.utils.prune as prune
@@ -30,6 +30,19 @@ from typing import Optional, Type
 
 def no_dropout_backward(module, grad_in, grad_out):
     return grad_out
+
+
+class PartialTeacherForcing(nn.Dropout):
+    """
+    Applies Dropout as partial teacher forcing. Therefore, scaling of the Dropout is reverted,
+    so that the partial teacher forcing sets the values to the original observation.
+    """
+    def forward(self, input: Tensor) -> Tensor:
+        if not self.training or self.p == 0:
+            return input
+        else:
+            scaled_output = super().forward(input)
+            return (1 - self.p) * scaled_output
 
 
 class HCNNCell(nn.Module):
@@ -75,7 +88,8 @@ class HCNNCell(nn.Module):
         teacher_forcing : float
             The probability that teacher forcing is applied for a single state neuron.
             In each time step this is repeated and therefore enforces stochastic learning
-            if the value is smaller than 1.
+            if the value is smaller than 1. Since not all nodes are corrected then, it is
+            partial teacher forcing (ptf).
         backward_full_Y: bool
             Apply partial teacher forcing dropout after or before the output is calculated.
             If True dropout layer is applied afterwards and the output contains the errors of all features.
@@ -109,7 +123,7 @@ class HCNNCell(nn.Module):
         self.eye = torch.eye(
             self.n_features_Y, self.n_state_neurons, requires_grad=False
         )
-        self.ptf_dropout = nn.Dropout(1 - self.teacher_forcing)
+        self.ptf_dropout = PartialTeacherForcing(1 - self.teacher_forcing)
         if self.sparsity > 0:
             prune.random_unstructured(self.A, name="weight", amount=self.sparsity)
         if not self.ptf_in_backward:

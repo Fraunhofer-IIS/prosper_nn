@@ -91,7 +91,8 @@ class HCNN(nn.Module):
         teacher_forcing: float
             The probability that teacher forcing is applied for a single state neuron.
             In each time step this is repeated and therefore enforces stochastic learning
-            if the value is smaller than 1.
+            if the value is smaller than 1. Since not all nodes are corrected then, it is
+            partial teacher forcing (ptf).
         decrease_teacher_forcing: float
             The amount by which teacher_forcing is decreased each epoch.
 
