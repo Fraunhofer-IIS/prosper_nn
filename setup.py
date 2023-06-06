@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding="utf-8") as f:
 
 setuptools.setup(
     name="prosper_nn",  # Replace with your own username
-    version="0.2.2",
+    version="0.2.3",
     author="Nico Beck, Julia Schemm",
     author_email="nico.beck@iis.fraunhofer.de",
     description="Package contains, in PyTorch implemented, neural networks with problem specific pre-structuring architectures and utils that help building and understanding models.",
