@@ -26,7 +26,7 @@ import torch.nn as nn
 import torch
 import torch.nn.utils.prune as prune
 from typing import Optional, Type
-from .hcnn_cell import no_dropout_backward
+from .hcnn_cell import no_dropout_backward, PartialTeacherForcing
 
 
 class HCNN_LSTM_Cell(nn.Module):
@@ -110,7 +110,7 @@ class HCNN_LSTM_Cell(nn.Module):
         self.eye = torch.eye(
             self.n_features_Y, self.n_state_neurons, requires_grad=False
         )
-        self.ptf_dropout = nn.Dropout(1 - self.teacher_forcing)
+        self.ptf_dropout = PartialTeacherForcing(1 - self.teacher_forcing)
         self.LSTM_regulator = nn.Linear(1, n_state_neurons, bias=False)
         nn.init.ones_(self.LSTM_regulator.weight)
 

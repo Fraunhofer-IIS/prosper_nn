@@ -26,7 +26,7 @@ import torch.nn as nn
 import torch
 import torch.nn.utils.prune as prune
 from typing import Optional, Type
-from ..hcnn.hcnn_cell import no_dropout_backward
+from ..hcnn.hcnn_cell import no_dropout_backward, PartialTeacherForcing
 
 
 class HCNN_KNOWN_U_Cell(nn.Module):
@@ -139,7 +139,7 @@ class HCNN_KNOWN_U_Cell(nn.Module):
             bias=False,
         )
 
-        self.ptf_dropout = nn.Dropout(1 - self.teacher_forcing)
+        self.ptf_dropout = PartialTeacherForcing(1 - self.teacher_forcing)
         if self.sparsity > 0:
             prune.random_unstructured(self.A, name="weight", amount=self.sparsity)
         if not self.ptf_in_backward:
