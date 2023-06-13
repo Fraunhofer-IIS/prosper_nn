@@ -239,5 +239,3 @@ with torch.no_grad():
             expected_time_series=expected_timeseries3[:, y],
             target=Y[: past_horizon + forecast_horizon, y],
         )
-
-# %%

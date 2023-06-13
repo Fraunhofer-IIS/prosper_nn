@@ -1,6 +1,7 @@
 import os
 import sys
 import inspect
+
 current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
@@ -31,30 +32,29 @@ n_models = 3
 # %% Generate dummy data
 Y, U = gtsd.sample_data(n_data, n_features_Y, n_features_U)
 
-Y_batches, U_batches = ci.create_input(Y,
-                                       past_horizon,
-                                       batchsize,
-                                       U,
-                                       future_U,
-                                       forecast_horizon)
+Y_batches, U_batches = ci.create_input(
+    Y, past_horizon, batchsize, U, future_U, forecast_horizon
+)
 
 targets = torch.zeros((past_horizon, batchsize, n_features_Y))
 
 # Initialize Ecnn and an ensemble of it
-ecnn_model = ecnn.ECNN(n_features_U=n_features_U,
-                       n_state_neurons=n_state_neurons,
-                       past_horizon=past_horizon,
-                       forecast_horizon=forecast_horizon,
-                       lstm=False,
-                       approach="backward",
-                       init_state=init_state,
-                       learn_init_state=True,
-                       n_features_Y=n_features_Y,
-                       future_U=future_U)
+ecnn_model = ecnn.ECNN(
+    n_features_U=n_features_U,
+    n_state_neurons=n_state_neurons,
+    past_horizon=past_horizon,
+    forecast_horizon=forecast_horizon,
+    lstm=False,
+    approach="backward",
+    init_state=init_state,
+    learn_init_state=True,
+    n_features_Y=n_features_Y,
+    future_U=future_U,
+)
 
-ensemble_model = ensemble.Ensemble(model=ecnn_model,
-                                   n_models=n_models,
-                                   initializer=torch.nn.init.kaiming_uniform_)
+ensemble_model = ensemble.Ensemble(
+    model=ecnn_model, n_models=n_models, initializer=torch.nn.init.kaiming_uniform_
+)
 
 # %% Train model
 
@@ -75,22 +75,28 @@ for epoch in range(epochs):
         mean = torch.squeeze(mean, 0)
         past_errors, forecasts = torch.split(outputs, past_horizon, dim=1)
 
-        losses = [loss_function(past_errors[j][i], targets[i]) for j in range(n_models)
-                                                                for i in range(past_horizon)]
+        losses = [
+            loss_function(past_errors[j][i], targets[i])
+            for j in range(n_models)
+            for i in range(past_horizon)
+        ]
         loss = sum(losses) / (n_models * past_horizon)
-        loss.backward(retain_graph=False)
+        loss.backward()
         optimizer.step()
 
-        mean_loss = sum([loss_function(mean[i], targets[i]) for i in range(past_horizon)]) / past_horizon
+        mean_loss = (
+            sum([loss_function(mean[i], targets[i]) for i in range(past_horizon)])
+            / past_horizon
+        )
         total_loss[epoch] += mean_loss.detach()
 
 # %% Prediction
 # example data for prediction
 if future_U:
-    example_pred_U = U[:(past_horizon+forecast_horizon)].unsqueeze(dim=1)
+    example_pred_U = U[: (past_horizon + forecast_horizon)].unsqueeze(dim=1)
 else:
     example_pred_U = U[:past_horizon].unsqueeze(dim=1)
-example_pred_Y = Y[:(past_horizon + forecast_horizon)].unsqueeze(dim=1)
+example_pred_Y = Y[: (past_horizon + forecast_horizon)].unsqueeze(dim=1)
 
 # predict with trained model
 with torch.no_grad():

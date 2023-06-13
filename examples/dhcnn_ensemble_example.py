@@ -1,7 +1,8 @@
 # %% Package Imports
 import sys, os
-sys.path.append(os.path.abspath('..'))
-sys.path.append(os.path.abspath('.'))
+
+sys.path.append(os.path.abspath(".."))
+sys.path.append(os.path.abspath("."))
 
 import torch
 import torch.nn as nn
@@ -28,26 +29,30 @@ n_models = 3
 # %% Create data and targets
 
 targets = torch.zeros((past_horizon, batchsize, n_features_Y))
-Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y-1, n_features_U=1)
+Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y - 1, n_features_U=1)
 Y = torch.cat((Y, U), 1)
 
 # Only use Y as input for the Dhcnn
 Y_batches = ci.create_input(Y, past_horizon, batchsize)
 
 #%% Initialize Dhcnn model and an ensemble of it
-dhcnn_model = dhcnn.DHCNN(n_state_neurons,
-                          n_features_Y,
-                          past_horizon,
-                          forecast_horizon,
-                          deepness,
-                          sparsity,
-                          activation=torch.tanh)
+dhcnn_model = dhcnn.DHCNN(
+    n_state_neurons,
+    n_features_Y,
+    past_horizon,
+    forecast_horizon,
+    deepness,
+    sparsity,
+    activation=torch.tanh,
+)
 
-dhcnn_ensemble = ensemble.Ensemble(model=dhcnn_model,
-                                   n_models=n_models,
-                                   sparsity=sparsity,
-                                   keep_pruning_mask=False,
-                                   initializer=torch.nn.init.kaiming_uniform_)                       
+dhcnn_ensemble = ensemble.Ensemble(
+    model=dhcnn_model,
+    n_models=n_models,
+    sparsity=sparsity,
+    keep_pruning_mask=False,
+    initializer=torch.nn.init.kaiming_uniform_,
+)
 
 # %% Train model
 optimizer1 = optim.Adam(dhcnn_ensemble.parameters(), lr=0.001)
@@ -66,17 +71,29 @@ for epoch in range(epochs):
         past_errors, forecasts = torch.split(outputs, past_horizon, dim=2)
         mean = torch.squeeze(mean, 0)
 
-        losses = [loss_function(past_errors [k][i][j], targets[j]) for i in range(deepness)
-            for j in range(past_horizon) for k in range(n_models)]
+        losses = [
+            loss_function(past_errors[k][i][j], targets[j])
+            for i in range(deepness)
+            for j in range(past_horizon)
+            for k in range(n_models)
+        ]
         loss = sum(losses) / (deepness * past_horizon * n_models)
         loss.backward()
         optimizer1.step()
 
-        mean_loss = sum([loss_function(mean[-1, i], targets[i]) for i in range(past_horizon)]) / past_horizon
+        mean_loss = (
+            sum([loss_function(mean[-1, i], targets[i]) for i in range(past_horizon)])
+            / past_horizon
+        )
         total_loss[epoch] += mean_loss.detach()
 
 # %% Evaluation
 # Visualize expected timeseries
-expected_timeseries = torch.cat((torch.add(mean[-1, :past_horizon], Y_batches[-1, :past_horizon]),
-                                mean[-1, past_horizon:]), dim=0).detach()
-visualize_forecasts.plot_time_series(expected_timeseries[:,0,0])
+expected_timeseries = torch.cat(
+    (
+        torch.add(mean[-1, :past_horizon], Y_batches[-1, :past_horizon]),
+        mean[-1, past_horizon:],
+    ),
+    dim=0,
+).detach()
+visualize_forecasts.plot_time_series(expected_timeseries[:, 0, 0])

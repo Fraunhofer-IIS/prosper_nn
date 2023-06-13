@@ -1,9 +1,9 @@
 import sys, os
-sys.path.append(os.path.abspath('.'))
+
+sys.path.append(os.path.abspath("."))
 import torch
 from prosper_nn.models.ensemble import Ensemble
 from prosper_nn.models.feedforward import FFNN
-from prosper_nn.utils import sensitivity_analysis
 
 # %% Set parameters
 batchsize = 10
@@ -28,7 +28,7 @@ optimizer = torch.optim.Adam(ffnn_ensemble.parameters(), lr=0.01)
 for t in range(500):
     ffnn_ensemble.zero_grad()
     y_preds, mean_y = torch.split(ffnn_ensemble(x), n_models)
-    
+
     loss = sum([loss_function(y_pred, y) for y_pred in y_preds]) / n_models
     loss.backward()
     optimizer.step()

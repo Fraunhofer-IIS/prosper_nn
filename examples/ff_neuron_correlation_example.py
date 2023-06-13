@@ -1,5 +1,6 @@
 import sys, os
-sys.path.append(os.path.abspath('.'))
+
+sys.path.append(os.path.abspath("."))
 
 import torch
 import torch.nn as nn
@@ -18,12 +19,16 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.fc1 = nn.Linear(100, 5)
         self.act1 = nn.Tanh()
-        self.fc2 = nn.Sequential(OrderedDict([
-            ('fc2_1', nn.Linear(5, 20)),
-            ('fc2_2', nn.Tanh()),
-            ('fc2_3', nn.Linear(20, 10)),
-            ('fc2_4', nn.Tanh())
-            ]))
+        self.fc2 = nn.Sequential(
+            OrderedDict(
+                [
+                    ("fc2_1", nn.Linear(5, 20)),
+                    ("fc2_2", nn.Tanh()),
+                    ("fc2_3", nn.Linear(20, 10)),
+                    ("fc2_4", nn.Tanh()),
+                ]
+            )
+        )
         self.fc3 = nn.Linear(10, 1)
 
     def forward(self, x):
@@ -32,6 +37,7 @@ class Net(nn.Module):
         x = self.fc2(x)
         x = self.fc3(x)
         return x
+
 
 net = Net()
 
@@ -63,6 +69,6 @@ with torch.no_grad():
     corr_matrix1, max_corr1, ind_neurons1 = nchl.hl_size_analysis(output_layer)
 
     # Variant where the index or name of the layer is forwarded
-    corr_matrix2, max_corr2, ind_neurons2 = nchl.hl_size_analysis_Sequential(net, 
-                                                                             name_layer="act1", 
-                                                                             model_input=X)
+    corr_matrix2, max_corr2, ind_neurons2 = nchl.hl_size_analysis_Sequential(
+        net, name_layer="act1", model_input=X
+    )
