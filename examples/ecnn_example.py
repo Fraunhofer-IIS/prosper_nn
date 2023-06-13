@@ -1,6 +1,7 @@
 import sys, os
-sys.path.append(os.path.abspath('..'))
-sys.path.append(os.path.abspath('.'))
+
+sys.path.append(os.path.abspath(".."))
+sys.path.append(os.path.abspath("."))
 
 import torch
 import torch.nn as nn
@@ -25,24 +26,23 @@ n_features_Y = 2
 
 # %% Generate data and targets
 Y, U = gtsd.sample_data(n_data, n_features_Y, n_features_U)
-Y_batches, U_batches = ci.create_input(Y,
-                                       past_horizon,
-                                       batchsize,
-                                       U,
-                                       future_U,
-                                       forecast_horizon)
+Y_batches, U_batches = ci.create_input(
+    Y, past_horizon, batchsize, U, future_U, forecast_horizon
+)
 targets = torch.zeros((past_horizon, batchsize, n_features_Y))
 
 # %% Initialize ECNN
-ecnn_model = ecnn.ECNN(n_features_U,
-                       n_state_neurons,
-                       past_horizon,
-                       forecast_horizon,
-                       lstm=False,
-                       approach="backward",
-                       learn_init_state=True,
-                       n_features_Y=n_features_Y,
-                       future_U = future_U)
+ecnn_model = ecnn.ECNN(
+    n_features_U,
+    n_state_neurons,
+    past_horizon,
+    forecast_horizon,
+    lstm=False,
+    approach="backward",
+    learn_init_state=True,
+    n_features_Y=n_features_Y,
+    future_U=future_U,
+)
 
 # %% Train model
 optimizer = optim.Adam(ecnn_model.parameters(), lr=0.01)
@@ -62,7 +62,7 @@ for epoch in range(epochs):
 
         losses = [loss_function(past_error[i], targets[i]) for i in range(past_horizon)]
         loss = sum(losses)
-        loss.backward(retain_graph=False)
+        loss.backward()
         optimizer.step()
         total_loss[epoch] += loss.detach()
 
@@ -70,34 +70,45 @@ for epoch in range(epochs):
 # Example data for prediction
 
 if future_U:
-    example_pred_U = torch.reshape(U[0:(past_horizon+forecast_horizon), :],
-                                   (past_horizon+forecast_horizon, 1, n_features_U)).float()
+    example_pred_U = torch.reshape(
+        U[0 : (past_horizon + forecast_horizon), :],
+        (past_horizon + forecast_horizon, 1, n_features_U),
+    ).float()
 else:
-    example_pred_U = torch.reshape(U[0:past_horizon, :],
-                                   (past_horizon, 1, n_features_U)).float()
-example_pred_Y = torch.reshape(Y[0:(past_horizon + forecast_horizon), :],
-                               (past_horizon+forecast_horizon, 1, n_features_Y)).float()
+    example_pred_U = torch.reshape(
+        U[0:past_horizon, :], (past_horizon, 1, n_features_U)
+    ).float()
+example_pred_Y = torch.reshape(
+    Y[0 : (past_horizon + forecast_horizon), :],
+    (past_horizon + forecast_horizon, 1, n_features_Y),
+).float()
 
 # Predict with trained model
 with torch.no_grad():
     ecnn_model.eval()
 
-    model_output = ecnn_model(example_pred_U,
-                              example_pred_Y[0:past_horizon])
+    model_output = ecnn_model(example_pred_U, example_pred_Y[:past_horizon])
     past_errors, forecast = torch.split(model_output, past_horizon)
     print("Forecast: {}".format(forecast))
-    expected_timeseries = torch.cat((torch.add(past_errors, example_pred_Y[:past_horizon]),
-                                     forecast), dim=0).detach().squeeze()
+    expected_timeseries = (
+        torch.cat(
+            (torch.add(past_errors, example_pred_Y[:past_horizon]), forecast), dim=0
+        )
+        .detach()
+        .squeeze()
+    )
 
     if ecnn_model.lstm:
         print(ecnn_model.ecnn_cell.D.weight.data)
 
     visualize_forecasts.plot_time_series(
-        expected_timeseries,
-        example_pred_Y.squeeze(1)[:, 0])
+        expected_timeseries, example_pred_Y.squeeze(1)[:, 0]
+    )
 
     # neuron correlation analysis to check size of hidden layer (= n_state_neurons)
-    states_for_correlation = torch.empty((U_batches.shape[0], batchsize, n_state_neurons))
+    states_for_correlation = torch.empty(
+        (U_batches.shape[0], batchsize, n_state_neurons)
+    )
     for batch_index in range(0, U_batches.shape[0]):
         U_batch = U_batches[batch_index]
         Y_batch = Y_batches[batch_index]

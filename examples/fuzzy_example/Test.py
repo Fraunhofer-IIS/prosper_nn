@@ -66,7 +66,7 @@ def test_layer(model, data, epochs=50, single=True):
         preds = model(inputs)
         optimizer.zero_grad()
         loss = criterion(preds, outputs)
-        loss.backward(retain_graph=True)
+        loss.backward()
         optimizer.step()
         losses.append(loss.item())
         if t % 10 == 0:
@@ -108,7 +108,7 @@ def test_model(model, data, epochs=50):
         preds = model(inputs)
         optimizer.zero_grad()
         loss = criterion(preds, labels)
-        loss.backward(retain_graph=True)
+        loss.backward()
         losses.append(loss.item())
         optimizer.step()
 

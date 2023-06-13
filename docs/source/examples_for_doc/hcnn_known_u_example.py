@@ -18,7 +18,7 @@ sparsity = 0
 teacher_forcing = 1
 decrease_teacher_forcing = 0.0001
 
-#  Generate data 
+#  Generate data
 Y, U = gtsd.sample_data(n_data, n_features_Y, n_features_U)
 Y_batches, U_batches = ci.create_input(Y,
                                        past_horizon,
@@ -26,11 +26,11 @@ Y_batches, U_batches = ci.create_input(Y,
                                        U,
                                        future_U,
                                        forecast_horizon)
-                                
+
 Y_batches.shape, U_batches.shape
 
 # Initialize HCNN_KNOWN_U
-hcnn_known_u_model = hcnn_known_u.HCNN_KNOWN_U(  
+hcnn_known_u_model = hcnn_known_u.HCNN_KNOWN_U(
     n_state_neurons,
     n_features_U,
     n_features_Y,
@@ -38,7 +38,7 @@ hcnn_known_u_model = hcnn_known_u.HCNN_KNOWN_U(
     forecast_horizon,
     sparsity,
     teacher_forcing = teacher_forcing,
-    decrease_teacher_forcing = decrease_teacher_forcing )                                                
+    decrease_teacher_forcing = decrease_teacher_forcing )
 
 # setting the optimizer, loss and targets
 optimizer = torch.optim.Adam(hcnn_known_u_model.parameters(), lr=0.01)
@@ -57,6 +57,6 @@ for epoch in range(epochs):
         past_error , forecast = torch.split(model_out,past_horizon)
         losses = [loss_function(past_error[i], targets[i]) for i in range(past_horizon)]
         loss = sum(losses)
-        loss.backward(retain_graph=False)
+        loss.backward()
         optimizer.step()
         total_loss[epoch] += loss.detach()
