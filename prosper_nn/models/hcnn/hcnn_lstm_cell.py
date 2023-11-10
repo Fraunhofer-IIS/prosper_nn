@@ -108,8 +108,8 @@ class HCNN_LSTM_Cell(nn.Module):
             out_features=self.n_state_neurons,
             bias=False,
         )
-        self.eye = torch.eye(
-            self.n_features_Y, self.n_state_neurons, requires_grad=False
+        self.eye = nn.Parameter(torch.eye(
+            self.n_features_Y, self.n_state_neurons), requires_grad=False
         )
         self.ptf_dropout = PartialTeacherForcing(1 - self.teacher_forcing)
         self.LSTM_regulator = nn.Linear(1, n_state_neurons, bias=False)

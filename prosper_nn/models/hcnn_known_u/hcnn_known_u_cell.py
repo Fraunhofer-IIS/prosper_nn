@@ -107,21 +107,21 @@ class HCNN_KNOWN_U_Cell(nn.Module):
             self.activation = torch.tanh
 
         # from state to output, used in filtering the hidden neurons.
-        self.eye = torch.eye(
-            self.n_features_Y, self.n_state_neurons, requires_grad=False
+        self.eye = nn.Parameter(torch.eye(
+            self.n_features_Y, self.n_state_neurons), requires_grad=False
         )
 
         # from error with padding for hidden neurons and n_features_U to r state
-        self.eye_err2rstate = torch.eye(
+        self.eye_err2rstate = nn.Parameter(torch.eye(
             self.n_features_Y,
-            self.n_state_neurons + self.n_features_U,
+            self.n_state_neurons + self.n_features_U),
             requires_grad=False,
         )
 
         # from state with padding for n_features_U to r state
-        self.eye_state2rstate = torch.eye(
+        self.eye_state2rstate = nn.Parameter(torch.eye(
             self.n_state_neurons,
-            self.n_state_neurons + self.n_features_U,
+            self.n_state_neurons + self.n_features_U),
             requires_grad=False,
         )
 
@@ -131,7 +131,7 @@ class HCNN_KNOWN_U_Cell(nn.Module):
             self.n_state_neurons,
         )
         eye_u = torch.eye(self.n_features_U)
-        self.eye_U2rstate = torch.cat((padding, eye_u), axis=1)
+        self.eye_U2rstate = nn.Parameter(torch.cat((padding, eye_u), axis=1), requires_grad=False)
 
         # from r state to state[t+1]
         self.A = nn.Linear(

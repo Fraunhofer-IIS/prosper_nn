@@ -102,7 +102,7 @@ class FRNN(torch.nn.Module):
             num_layers=n_layers,
             batch_first=batch_first,
         )
-        prune_identity = torch.eye(n_features_input)
+        prune_identity = nn.Parameter(torch.eye(n_features_input))
         # Restrict RNN weights so the hidden state and the output resemble the time dependency of
         # the input sequence
         # weights are restricted to a diagonal matrix
@@ -112,7 +112,8 @@ class FRNN(torch.nn.Module):
         # Fuzzy layer
         self.fuzzy = nn.Sequential(
             Fuzzification(
-                n_features_input=self.n_features_input, membership_fcts=self.membership_fcts
+                n_features_input=self.n_features_input,
+                membership_fcts=self.membership_fcts,
             ),
             FuzzyInference(
                 n_features_input=self.n_features_input,
