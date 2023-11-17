@@ -32,7 +32,7 @@ def calculate_sensitivity_analysis(
     model: torch.nn.Module,
     *data: Tuple[torch.Tensor, ...],
     output_neuron: tuple = (0,),
-    batchsize: int = 1
+    batchsize: int = 1,
 ) -> torch.tensor:
     """
     Calculates the sensitivity matrix.
@@ -215,6 +215,9 @@ def analyse_temporal_sensitivity(
     -------
     None
     """
+
+    if features is None:
+        features = [f"feature_{i}" for i in range(n_features)]
     if type(data) is torch.Tensor:
         data = (data,)
     # Calculations

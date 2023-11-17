@@ -9,22 +9,22 @@ n_batches = 100
 batchsize = 5
 
 # Initialise Deep Feedforward Neural Network
-ff_model = FFNN(input_dim=input_dim,
-                hidden_dim=hidden_dim,
-                output_dim=output_dim)
+feedforward = FFNN(input_dim=input_dim,
+                   hidden_dim=hidden_dim,
+                   output_dim=output_dim)
 
 X = torch.randn([n_batches, batchsize, input_dim])
 Y = torch.randn([n_batches, batchsize, output_dim])
 
 # Train Model
-optimizer = torch.optim.Adam(ff_model.parameters())
+optimizer = torch.optim.Adam(feedforward.parameters())
 loss_function = torch.nn.MSELoss()
 
 for epoch in range(10):
     for x, y in zip(X, Y):
-        output = ff_model(x)
+        output = feedforward(x)
 
-        ff_model.zero_grad()
+        feedforward.zero_grad()
         loss = loss_function(output, y)
         loss.backward()
         optimizer.step()

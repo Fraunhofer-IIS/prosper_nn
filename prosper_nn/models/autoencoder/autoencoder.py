@@ -33,6 +33,7 @@ class Autoencoder(nn.Module):
     Additionally the model trains a decoder to map the encoded representation back
     to the original dimension.
     """
+
     def __init__(
         self,
         n_inputs: int,

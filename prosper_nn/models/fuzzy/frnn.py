@@ -112,7 +112,8 @@ class FRNN(torch.nn.Module):
         # Fuzzy layer
         self.fuzzy = nn.Sequential(
             Fuzzification(
-                n_features_input=self.n_features_input, membership_fcts=self.membership_fcts
+                n_features_input=self.n_features_input,
+                membership_fcts=self.membership_fcts,
             ),
             FuzzyInference(
                 n_features_input=self.n_features_input,

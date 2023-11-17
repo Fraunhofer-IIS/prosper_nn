@@ -25,14 +25,15 @@ Propser_nn is free software: you can redistribute it and/or modify
 import torch.nn as nn
 import torch
 from typing import Optional
-from ..hcnn import hcnn_cell, hcnn_lstm_cell
+from ..hcnn import hcnn_cell, hcnn_gru_cell
 
 
 class DHCNN(nn.Module):
     """
     The DHCNN class creates a Deep Historical Consistent Neural Network.
     The model uses multiple HCNNs in different levels. The state from the lower
-    level is passed to one upper level. The first level is a HCNN with LSTM implementation.
+    level is passed to one upper level. The first level is a HCNN with the
+    GRU variant 3 implementation.
     """
 
     def __init__(
@@ -68,7 +69,8 @@ class DHCNN(nn.Module):
             It represents the amount of forecast steps the model returns.
         deepness : int
             The number of stacked HCNNs in the Neural Network.
-            A deepness equal to 1 leads to a normal Historical Consistent Neural Network with LSTM.
+            A deepness equal to 1 leads to a normal
+            Historical Consistent Neural Network with GRU variant 3 implementation.
         sparsity : float
             The share of weights that are set to zero in the matrix A.
             These weights are not trainable and therefore always zero.
@@ -124,7 +126,7 @@ class DHCNN(nn.Module):
 
         for i in range(deepness):
             if i == 0:
-                HCNNCell = hcnn_lstm_cell.HCNN_LSTM_Cell
+                HCNNCell = hcnn_gru_cell.HCNN_GRU_3_variant
             else:
                 HCNNCell = hcnn_cell.HCNNCell
             setattr(
@@ -167,14 +169,6 @@ class DHCNN(nn.Module):
         )
         forecast = torch.zeros(
             self.deepness, self.forecast_horizon, self.batchsize, self.n_features_Y
-        )
-
-        # LSTM: Keep entries of diagonal matrix between 0 and 1.
-        diag_entries = torch.clamp(
-            self.hcnn_cell_level0.LSTM_regulator.weight.data, 0, 1
-        )
-        self.hcnn_cell_level0.LSTM_regulator.weight.data = torch.nn.Parameter(
-            diag_entries
         )
 
         # past
