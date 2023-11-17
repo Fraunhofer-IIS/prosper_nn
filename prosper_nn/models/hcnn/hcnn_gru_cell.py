@@ -29,10 +29,16 @@ from typing import Optional, Type
 from .hcnn_cell import no_dropout_backward, PartialTeacherForcing
 
 
-class HCNN_LSTM_Cell(nn.Module):
+class HCNN_GRU_3_variant(nn.Module):
     """
-    The HCNN_LSTM_Cell call is implemented to model one forecast step in a HCNN
-    with a simple version of Long-Short-Term Memory.
+    The HCNN_GRU_3_variant call is implemented to model one forecast step in a HCNN
+    with a version similar to the GRU 3 variant in the following paper.
+    One difference is that $$r_t$$ is fixed to a vector with ones in our implementation.
+
+    R. Dey and F. M. Salem, "Gate-variants of Gated Recurrent Unit (GRU) neural networks,"
+    2017 IEEE 60th International Midwest Symposium on Circuits and Systems (MWSCAS),
+    Boston, MA, USA, 2017, pp. 1597-1600, doi: 10.1109/MWSCAS.2017.8053243
+
     By recursively using the cell a HCNN network can be implemented.
     Mathematically the the output of one cell is calculated as following, where
     :math:`s_t^{\\prime}` serves as an interim result:
@@ -40,9 +46,9 @@ class HCNN_LSTM_Cell(nn.Module):
     .. math ::
         s_{t}^\\prime = \\tanh \\left( s_t -[\\mathbb{1}, 0]^T \\cdot ( [\\mathbb{1}, 0] s_t -y_t^d) \\right)
     .. math ::
-        s_{t+1} = (1-D) s_{t}^\\prime + DA \\tanh (s_{t}^\\prime) = s_{t}^\\prime + D(A \\tanh(s_{t}^\\prime)-s_{t}^\\prime)
+        s_{t+1} = (1 - \\sigma(update\_vector)) \\circ s_{t}^\\prime + \\sigma(update\_vector) \circ A \\tanh (s_{t}^\\prime)
     .. math ::
-        y_t = [\\mathbb{1}, 0] \\cdot s_t
+        \\hat{y}_t = [\\mathbb{1}, 0] \\cdot s_t
     """
 
     def __init__(
@@ -91,7 +97,7 @@ class HCNN_LSTM_Cell(nn.Module):
         -------
         None
         """
-        super(HCNN_LSTM_Cell, self).__init__()
+        super(HCNN_GRU_3_variant, self).__init__()
         self.n_state_neurons = n_state_neurons
         self.n_features_Y = n_features_Y
         self.sparsity = sparsity
@@ -112,8 +118,13 @@ class HCNN_LSTM_Cell(nn.Module):
             self.n_features_Y, self.n_state_neurons, requires_grad=False
         )
         self.ptf_dropout = PartialTeacherForcing(1 - self.teacher_forcing)
-        self.LSTM_regulator = nn.Linear(1, n_state_neurons, bias=False)
-        nn.init.ones_(self.LSTM_regulator.weight)
+
+        self.update_vector = nn.Parameter(
+            torch.zeros(n_state_neurons), requires_grad=True
+        )
+        self.ones = nn.Parameter(
+            torch.ones_like(self.update_vector), requires_grad=False
+        )
 
         if self.sparsity > 0:
             prune.random_unstructured(self.A, name="weight", amount=self.sparsity)
@@ -145,10 +156,6 @@ class HCNN_LSTM_Cell(nn.Module):
             If no observation is given, the output is equal to the expectation.
         """
 
-        # Embed LSTM_regulator weights in matrix
-        self.LSTM_regulator_matrix = torch.diag_embed(
-            torch.reshape(self.LSTM_regulator.weight, (-1,))
-        )
         # Cell forward calculations
         expectation = torch.mm(state, self.eye.T)
         if observation is not None:
@@ -161,10 +168,13 @@ class HCNN_LSTM_Cell(nn.Module):
             state = state - teacher_forcing
         else:  # Forecasts
             output = expectation
-        state = (
-            state
-            + (self.A(self.activation(state)) - state) @ self.LSTM_regulator_matrix
-        )
+
+        candidate_activation = self.A(self.activation(state))
+
+        state = (self.ones - torch.sigmoid(self.update_vector)) * state + torch.sigmoid(
+            self.update_vector
+        ) * candidate_activation
+
         return state, output
 
     def set_teacher_forcing(self, teacher_forcing: float) -> None:

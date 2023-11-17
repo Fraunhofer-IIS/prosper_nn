@@ -106,8 +106,6 @@ with torch.no_grad():
         U_batch = U_batches[batch_index]
         Y_batch = Y_batches[batch_index]
         model_output = hcnn_known_u_model(U_batch, Y_batch)
-        states_for_correlation[batch_index] = hcnn_known_u_model.state[
-            past_horizon
-        ]
+        states_for_correlation[batch_index] = hcnn_known_u_model.state[past_horizon]
     states_for_correlation = states_for_correlation.reshape((-1, n_state_neurons))
     corr_matrix, max_corr, ind_neurons = nchl.hl_size_analysis(states_for_correlation)

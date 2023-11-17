@@ -27,19 +27,27 @@ import torch.nn as nn
 from typing import Tuple, Type
 
 
-class ECNN_LSTM_Cell(nn.Module):
+class ECNN_GRU_3_variant(nn.Module):
 
     """
-    LSTM cell of a Error-Correction Neural Network (ECNN).
+    ECNN_GRU_3_variant cell of a Error-Correction Neural Network (ECNN).
     Compared to the normal ECNN cell, $s_t$ is calculated differently:
 
     .. math::
-        s_t = (1- LSTMregulator)s_{t-1} + LSTMregulator(tanh(As_{t-1} + Bu_t))
+        s_t = (1 - \sigma(update\_vector)) \\circ s_{t-1} + \\sigma(update\_vector) \\circ (tanh(As_{t-1} + Bu_t + D(\\hat{y}_{t-1} - y_{t-1})))
 
-    The LSTM regulator is a diagonal matrix with diagonal entries between 0 and 1. At the start of learning, they are
-    all set to one, which means, that the architecture defaults to the regular ECNN architecture. The other extreme
-    would be for the LSTM regulator to only have entries which are 0. Then $s_t=s_{t-1}$ and there is total
-    long-term memory.
+    The implementation is similar to version 3 of the GRU variants in the following paper.
+    One difference is that $$r_t$$ is fixed to a vector with ones in our implementation.
+
+    R. Dey and F. M. Salem, "Gate-variants of Gated Recurrent Unit (GRU) neural networks,"
+    2017 IEEE 60th International Midwest Symposium on Circuits and Systems (MWSCAS),
+    Boston, MA, USA, 2017, pp. 1597-1600, doi: 10.1109/MWSCAS.2017.8053243  [Titel anhand dieser DOI in Citavi-Projekt übernehmen]
+
+    If the update vector has large values, the sigmoid function converges toward 1 and
+    the architecture defaults to the regular ECNN archictecture.
+    On the other hand, if the update vector contains large negative values, then
+    $s_t=s_{t-1}$ and there is total memory.
+
     """
 
     def __init__(
@@ -72,14 +80,20 @@ class ECNN_LSTM_Cell(nn.Module):
         None
 
         """
-        super(ECNN_LSTM_Cell, self).__init__()
+        super(ECNN_GRU_3_variant, self).__init__()
 
         self.A = nn.Linear(n_state_neurons, n_state_neurons, bias=False)
         self.B = nn.Linear(n_features_U, n_state_neurons, bias=False)
         self.C = nn.Linear(n_state_neurons, n_features_Y, bias=False)
         self.D = nn.Linear(n_features_Y, n_state_neurons, bias=False)
-        self.LSTM_regulator = nn.Linear(1, n_state_neurons, bias=False)
-        nn.init.ones_(self.LSTM_regulator.weight)
+
+        self.update_vector = nn.Parameter(
+            torch.zeros(n_state_neurons), requires_grad=True
+        )
+
+        self.ones = nn.Parameter(
+            torch.ones_like(self.update_vector), requires_grad=False
+        )
 
         self.act = activation
 
@@ -89,7 +103,7 @@ class ECNN_LSTM_Cell(nn.Module):
         self, state: torch.Tensor, U: torch.Tensor = None, Y: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Forward pass of the ECNN cell.
+        Forward pass of the ECNN GRU 3 variant.
 
         Parameters
         ----------
@@ -114,37 +128,22 @@ class ECNN_LSTM_Cell(nn.Module):
 
         expectation = self.C(state)
 
-        self.LSTM_regulator_matrix = torch.diag_embed(
-            torch.reshape(self.LSTM_regulator.weight, (-1,))
-        )
-        if U is not None:
-            if Y is not None:
-                output = expectation - Y
-                state = (
-                    state
-                    + (self.act(self.A(state) + self.B(U) + self.D(output)) - state)
-                    @ self.LSTM_regulator_matrix
-                )
-            else:
-                output = expectation
-                state = (
-                    state
-                    + (self.act(self.A(state) + self.B(U)) - state)
-                    @ self.LSTM_regulator_matrix
-                )
+        if Y is not None:
+            output = expectation - Y
+            error_correction = self.D(output)
         else:
-            if Y is not None:
-                output = expectation - Y
-                state = (
-                    state
-                    + (self.act(self.A(state) + self.D(output)) - state)
-                    @ self.LSTM_regulator_matrix
-                )
-            else:
-                output = expectation
-                state = (
-                    state
-                    + (self.act(self.A(state)) - state) @ self.LSTM_regulator_matrix
-                )
+            output = expectation
+            error_correction = 0
 
-        return (output, state)
+        if U is not None:
+            candidate_activation = self.act(
+                self.A(state) + self.B(U) + error_correction
+            )
+        else:
+            candidate_activation = self.act(self.A(state) + error_correction)
+
+        state = (self.ones - torch.sigmoid(self.update_vector)) * state + torch.sigmoid(
+            self.update_vector
+        ) * candidate_activation
+
+        return output, state

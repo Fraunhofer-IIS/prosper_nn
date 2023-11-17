@@ -25,7 +25,7 @@ Propser_nn is free software: you can redistribute it and/or modify
 import torch.nn as nn
 import torch
 from typing import Optional, Type
-from . import hcnn_cell, hcnn_lstm_cell
+from . import hcnn_cell, hcnn_gru_cell
 
 
 class HCNN(nn.Module):
@@ -47,7 +47,7 @@ class HCNN(nn.Module):
         forecast_horizon: int,
         sparsity: float = 0.0,
         activation: Type[torch.autograd.Function] = torch.tanh,
-        lstm: bool = False,
+        cell_type: str = "hcnn_cell",
         init_state: Optional[torch.Tensor] = None,
         learn_init_state: bool = True,
         teacher_forcing: float = 1,
@@ -81,8 +81,9 @@ class HCNN(nn.Module):
             The activation function that is applied on the output of the hidden layers.
             The same function is used on all hidden layers.
             No function is applied if no function is given.
-        lstm: boolean
-           Include long short-term memory or not.
+        cell_type: str
+            Include a version of the gated recurrent unit.
+            Possible choices: hcnn_cell or hcnn_gru_3_variant.
         init_state : torch.Tensor
             The initial state of the HCNN model.
             Can be given optionally and is chosen randomly if not specified.
@@ -107,7 +108,7 @@ class HCNN(nn.Module):
         self.forecast_horizon = forecast_horizon
         self.sparsity = sparsity
         self.activation = activation
-        self.lstm = lstm
+        self.cell_type = cell_type
         self.teacher_forcing = teacher_forcing
         self.decrease_teacher_forcing = decrease_teacher_forcing
         self.backward_full_Y = backward_full_Y
@@ -122,12 +123,13 @@ class HCNN(nn.Module):
         if init_state is not None:
             self.init_state.data = init_state
 
-        # choose HCNNCell
-        if lstm:
-            self.HCNNCell = hcnn_lstm_cell.HCNN_LSTM_Cell
-        else:
+        if cell_type == "hcnn_cell":
             self.HCNNCell = hcnn_cell.HCNNCell
-        # init HCNNCELL
+        elif cell_type == "hcnn_gru_3_variant":
+            self.HCNNCell = hcnn_gru_cell.HCNN_GRU_3_variant
+        else:
+            raise ValueError("Cell type is not found")
+
         self.HCNNCell = self.HCNNCell(
             self.n_state_neurons,
             self.n_features_Y,
@@ -157,12 +159,6 @@ class HCNN(nn.Module):
         """
 
         self.state[0] = self.init_state
-
-        # LSTM: Keep entries of diagonal matrix between 0 and 1.
-        if self.lstm:
-            diag_entries = torch.clamp(self.HCNNCell.LSTM_regulator.weight.data, 0, 1)
-            self.HCNNCell.LSTM_regulator.weight.data = torch.nn.Parameter(diag_entries)
-
         self._check_sizes(Y)
         batchsize = Y.shape[1]
 

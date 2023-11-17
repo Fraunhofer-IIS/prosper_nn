@@ -39,12 +39,11 @@ Y_batches, U_batches = ci.create_input(
 targets = torch.zeros((past_horizon, batchsize, n_features_Y))
 
 # Initialize Ecnn and an ensemble of it
-ecnn_model = ecnn.ECNN(
+ecnn = ecnn.ECNN(
     n_features_U=n_features_U,
     n_state_neurons=n_state_neurons,
     past_horizon=past_horizon,
     forecast_horizon=forecast_horizon,
-    lstm=False,
     approach="backward",
     init_state=init_state,
     learn_init_state=True,
@@ -53,7 +52,7 @@ ecnn_model = ecnn.ECNN(
 )
 
 ensemble_model = ensemble.Ensemble(
-    model=ecnn_model, n_models=n_models, initializer=torch.nn.init.kaiming_uniform_
+    model=ecnn, n_models=n_models, initializer=torch.nn.init.kaiming_uniform_
 )
 
 # %% Train model

@@ -12,8 +12,8 @@ The other tutorials are sometimes based on or refer to it.
 If you have only a small number of available data and need explainability of the model, have a look at (Fuzzy Neural Networks).
 
 For time series forecasting there are multiple options. The Error Correction Neural Network tutorial is the right one if you want to forecast only a small number of time steps into the future.
-If you wish to forecast for a long horizon, you should probably look into the `Historical Consistant Neural Network <Hcnn_Flow.ipynb#Historical-Consistent-Neural-Network-Workflow>`_ tutorial.
-If the results aren't good enough, giving the `Causal-Retro Causal <CRCNN Flow.ipynb#Causal-Retro-Causal-Neural-Network-Workflow>`_ model a shot might be a good idea.
+If you wish to forecast for a long horizon, you should probably look into the `Historical Consistant Neural Network <HCNN.ipynb#Historical-Consistent-Neural-Network-Workflow>`_ tutorial.
+If the results aren't good enough, giving the `Causal-Retro Causal <CRCNN.ipynb#Causal-Retro-Causal-Neural-Network-Workflow>`_ model a shot might be a good idea.
 
 
 The notebooks begin with simple versions of the models and present further developments of them later in the tutorials.

@@ -22,4 +22,4 @@ Propser_nn is free software: you can redistribute it and/or modify
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from .ecnn_model import *
+from .ecnn import *

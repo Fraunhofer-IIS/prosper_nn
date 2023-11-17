@@ -24,7 +24,7 @@ Propser_nn is free software: you can redistribute it and/or modify
 
 import torch
 import torch.nn as nn
-from . import ecnn_cell, ecnn_lstm_cell
+from . import ecnn_cell, ecnn_gru_cell
 from typing import Tuple, Type
 
 
@@ -69,7 +69,7 @@ class ECNN(torch.nn.Module):
         n_state_neurons: int,
         past_horizon: int,
         forecast_horizon: int = 1,
-        lstm: bool = False,
+        cell_type: str = "ecnn_cell",
         approach: str = "backward",
         init_state: torch.Tensor = None,
         learn_init_state: bool = True,
@@ -91,8 +91,10 @@ class ECNN(torch.nn.Module):
             prediction.
         forecast_horizon: int
             The forecast horizon.
-        lstm: boolean
-           Include long short-term memory or not. Use either ecnn_cell or ecnn_lstm_cell.
+
+        cell_type: str
+           Include a version of the gated recurrent unit.
+           Possible choices: ecnn_cell or ecnn_gru_3_variant.
         approach: string
             Either "backward" or "forward".
             A backward approach means that the external features at time t
@@ -128,7 +130,7 @@ class ECNN(torch.nn.Module):
         self.n_state_neurons = n_state_neurons
         self.past_horizon = past_horizon
         self.forecast_horizon = forecast_horizon
-        self.lstm = lstm
+        self.cell_type = cell_type
         self.approach = approach
         self.future_U = future_U
 
@@ -136,15 +138,16 @@ class ECNN(torch.nn.Module):
 
         self.state = [torch.tensor] * (past_horizon + forecast_horizon + 1)
 
-        # Choose ECNN cell
-        if lstm:
-            self.ecnn_cell = ecnn_lstm_cell.ECNN_LSTM_Cell
+        if cell_type == "ecnn_cell":
+            self.ECNNCell = ecnn_cell.ECNNCell(
+                n_features_U, n_state_neurons, activation, n_features_Y
+            )
+        elif cell_type == "ecnn_gru_3_variant":
+            self.ECNNCell = ecnn_gru_cell.ECNN_GRU_3_variant(
+                n_features_U, n_state_neurons, activation, n_features_Y
+            )
         else:
-            self.ecnn_cell = ecnn_cell.ECNNCell
-        # Init ECNN cell
-        self.ecnn_cell = self.ecnn_cell(
-            n_features_U, n_state_neurons, activation, n_features_Y
-        )
+            raise ValueError("Cell type is not found")
 
         self.init_state = nn.Parameter(
             torch.rand(1, n_state_neurons), requires_grad=learn_init_state
@@ -174,11 +177,6 @@ class ECNN(torch.nn.Module):
             shape=(past_horizon+forecast_horizon, batchsize, n_features_Y)
         """
 
-        # LSTM: Keep entries of diagonal matrix between 0 and 1.
-        if self.lstm:
-            diag_entries = torch.clamp(self.ecnn_cell.D.weight.data, 0, 1)
-            self.ecnn_cell.D.weight.data = torch.nn.Parameter(diag_entries)
-
         # Check sizes of input and output
         self.check_sizes(U, Y)
         batchsize = U.shape[1]
@@ -192,35 +190,33 @@ class ECNN(torch.nn.Module):
 
         if approach == "backward":
             # start
-            _, self.state[0] = self.ecnn_cell(
-                self.init_state.repeat(batchsize, 1), U[0]
-            )
+            _, self.state[0] = self.ECNNCell(self.init_state.repeat(batchsize, 1), U[0])
             # past
             for t in range(1, self.past_horizon):
-                past_error[t - 1], self.state[t] = self.ecnn_cell(
+                past_error[t - 1], self.state[t] = self.ECNNCell(
                     self.state[t - 1], U[t], Y[t - 1]
                 )
             if self.future_U:
-                past_error[t], self.state[t + 1] = self.ecnn_cell(
+                past_error[t], self.state[t + 1] = self.ECNNCell(
                     self.state[t], U=U[t + 1], Y=Y[t]
                 )
                 # future
                 for t in range(
                     self.past_horizon + 1, self.past_horizon + self.forecast_horizon
                 ):
-                    forecast[t - self.past_horizon - 1], self.state[t] = self.ecnn_cell(
+                    forecast[t - self.past_horizon - 1], self.state[t] = self.ECNNCell(
                         self.state[t - 1], U=U[t]
                     )
-                forecast[t - self.past_horizon], self.state[t + 1] = self.ecnn_cell(
+                forecast[t - self.past_horizon], self.state[t + 1] = self.ECNNCell(
                     self.state[t]
                 )
             else:
-                past_error[t], self.state[t + 1] = self.ecnn_cell(self.state[t], Y=Y[t])
+                past_error[t], self.state[t + 1] = self.ECNNCell(self.state[t], Y=Y[t])
                 # future
                 for t in range(
                     self.past_horizon + 1, self.past_horizon + self.forecast_horizon + 1
                 ):
-                    forecast[t - self.past_horizon - 1], self.state[t] = self.ecnn_cell(
+                    forecast[t - self.past_horizon - 1], self.state[t] = self.ECNNCell(
                         self.state[t - 1]
                     )
 
@@ -229,7 +225,7 @@ class ECNN(torch.nn.Module):
             self.state[0] = self.init_state.repeat(batchsize, 1)
             # past
             for t in range(1, self.past_horizon + 1):
-                past_error[t - 1], self.state[t] = self.ecnn_cell(
+                past_error[t - 1], self.state[t] = self.ECNNCell(
                     self.state[t - 1], U[t - 1], Y[t - 1]
                 )
             # future
@@ -237,14 +233,14 @@ class ECNN(torch.nn.Module):
                 for t in range(
                     self.past_horizon + 1, self.past_horizon + self.forecast_horizon + 1
                 ):
-                    forecast[t - self.past_horizon - 1], self.state[t] = self.ecnn_cell(
+                    forecast[t - self.past_horizon - 1], self.state[t] = self.ECNNCell(
                         self.state[t - 1], U=U[t - 1]
                     )
             else:
                 for t in range(
                     self.past_horizon + 1, self.past_horizon + self.forecast_horizon + 1
                 ):
-                    forecast[t - self.past_horizon - 1], self.state[t] = self.ecnn_cell(
+                    forecast[t - self.past_horizon - 1], self.state[t] = self.ECNNCell(
                         self.state[t - 1]
                     )
 

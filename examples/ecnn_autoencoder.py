@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 import prosper_nn.utils.generate_time_series_data as gtsd
 import prosper_nn.utils.create_input_ecnn_hcnn as ci
-from prosper_nn.models.ecnn.ecnn_model import ECNN
+from prosper_nn.models.ecnn.ecnn import ECNN
 from prosper_nn.utils import visualize_forecasts
 from prosper_nn.models.autoencoder.autoencoder import Autoencoder
 
@@ -37,12 +37,12 @@ autoencoder = Autoencoder(n_target_features, n_features_Y)
 
 
 # ecnn
-ecnn_model = ECNN(
+ecnn = ECNN(
     n_features_U=n_features_U,
     n_state_neurons=n_state_neurons,
     past_horizon=past_horizon,
     forecast_horizon=forecast_horizon,
-    lstm=False,
+    cell_type="ecnn_cell",
     approach="backward",
     init_state=init_state,
     learn_init_state=True,
@@ -51,7 +51,7 @@ ecnn_model = ECNN(
 )
 
 # module list to combine parameters of both models for training
-modules = nn.ModuleList([autoencoder, ecnn_model])
+modules = nn.ModuleList([autoencoder, ecnn])
 
 # %% Creating dataset and targets
 
@@ -88,7 +88,7 @@ for epoch in range(epochs):
         Y_compressed = autoencoder.encode(Y_batch)
 
         # ecnn pass through
-        ecnn_output = ecnn_model(U_batch, Y_compressed)
+        ecnn_output = ecnn(U_batch, Y_compressed)
         past_error, forecast = torch.split(ecnn_output, past_horizon)
 
         # loss for ecnn -> output should be zero / compare to zero target
@@ -133,15 +133,15 @@ example_pred_Y = torch.reshape(
 
 with torch.no_grad():
     # preparing model
-    ecnn_model.eval()
+    ecnn.eval()
     autoencoder.eval()
-    ecnn_model.batchsize = 1
+    ecnn.batchsize = 1
 
     # using autoencoder to compress Y
     example_pred_compressed_Y = autoencoder.encode(example_pred_Y)
 
     # feeding compressed Y and input U through the ecnn model
-    ecnn_output = ecnn_model(example_pred_U, example_pred_compressed_Y[0:past_horizon])
+    ecnn_output = ecnn(example_pred_U, example_pred_compressed_Y[0:past_horizon])
     past_predictions_compressed, forecast_compressed = torch.split(
         ecnn_output, past_horizon
     )

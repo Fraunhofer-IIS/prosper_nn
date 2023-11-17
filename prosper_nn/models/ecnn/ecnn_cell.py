@@ -108,19 +108,16 @@ class ECNNCell(nn.Module):
 
         expectation = self.C(state)
 
-        if U is not None:
-            if Y is not None:
-                output = expectation - Y
-                state = self.act(self.A(state) + self.B(U) + self.D(output))
-            else:
-                output = expectation
-                state = self.act(self.A(state) + self.B(U))
+        if Y is not None:
+            output = expectation - Y
+            error_correction = self.D(output)
         else:
-            if Y is not None:
-                output = expectation - Y
-                state = self.act(self.A(state) + self.D(output))
-            else:
-                output = expectation
-                state = self.act(self.A(state))
+            output = expectation
+            error_correction = 0
 
-        return (output, state)
+        if U is not None:
+            state = self.act(self.A(state) + self.B(U) + error_correction)
+        else:
+            state = self.act(self.A(state) + error_correction)
+
+        return output, state

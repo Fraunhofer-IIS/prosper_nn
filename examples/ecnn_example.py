@@ -32,12 +32,12 @@ Y_batches, U_batches = ci.create_input(
 targets = torch.zeros((past_horizon, batchsize, n_features_Y))
 
 # %% Initialize ECNN
-ecnn_model = ecnn.ECNN(
+ecnn = ecnn.ECNN(
     n_features_U,
     n_state_neurons,
     past_horizon,
     forecast_horizon,
-    lstm=False,
+    cell_type='ecnn_cell',
     approach="backward",
     learn_init_state=True,
     n_features_Y=n_features_Y,
@@ -45,7 +45,7 @@ ecnn_model = ecnn.ECNN(
 )
 
 # %% Train model
-optimizer = optim.Adam(ecnn_model.parameters(), lr=0.01)
+optimizer = optim.Adam(ecnn.parameters(), lr=0.01)
 loss_function = nn.MSELoss()
 
 epochs = 10
@@ -53,11 +53,11 @@ epochs = 10
 total_loss = epochs * [0]
 for epoch in range(epochs):
     for batch_index in range(0, U_batches.shape[0]):
-        ecnn_model.zero_grad()
+        ecnn.zero_grad()
 
         U_batch = U_batches[batch_index]
         Y_batch = Y_batches[batch_index]
-        model_output = ecnn_model(U_batch, Y_batch)
+        model_output = ecnn(U_batch, Y_batch)
         past_error, forecast = torch.split(model_output, past_horizon)
 
         losses = [loss_function(past_error[i], targets[i]) for i in range(past_horizon)]
@@ -85,9 +85,9 @@ example_pred_Y = torch.reshape(
 
 # Predict with trained model
 with torch.no_grad():
-    ecnn_model.eval()
+    ecnn.eval()
 
-    model_output = ecnn_model(example_pred_U, example_pred_Y[:past_horizon])
+    model_output = ecnn(example_pred_U, example_pred_Y[:past_horizon])
     past_errors, forecast = torch.split(model_output, past_horizon)
     print("Forecast: {}".format(forecast))
     expected_timeseries = (
@@ -97,9 +97,6 @@ with torch.no_grad():
         .detach()
         .squeeze()
     )
-
-    if ecnn_model.lstm:
-        print(ecnn_model.ecnn_cell.D.weight.data)
 
     visualize_forecasts.plot_time_series(
         expected_timeseries, example_pred_Y.squeeze(1)[:, 0]
@@ -112,7 +109,7 @@ with torch.no_grad():
     for batch_index in range(0, U_batches.shape[0]):
         U_batch = U_batches[batch_index]
         Y_batch = Y_batches[batch_index]
-        model_output = ecnn_model(U_batch, Y_batch)
-        states_for_correlation[batch_index, :, :] = ecnn_model.state[past_horizon]
+        model_output = ecnn(U_batch, Y_batch)
+        states_for_correlation[batch_index, :, :] = ecnn.state[past_horizon]
     states_for_correlation = states_for_correlation.reshape((-1, n_state_neurons))
     corr_matrix, max_corr, ind_neurons = nchl.hl_size_analysis(states_for_correlation)

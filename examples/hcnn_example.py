@@ -44,7 +44,7 @@ hcnn_model = prosper_nn.models.hcnn.HCNN(
     past_horizon,
     forecast_horizon,
     sparsity,
-    lstm=True,
+    cell_type='hcnn_cell',
     teacher_forcing=teacher_forcing,
     decrease_teacher_forcing=decrease_teacher_forcing,
 )

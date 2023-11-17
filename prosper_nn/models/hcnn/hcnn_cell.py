@@ -37,6 +37,7 @@ class PartialTeacherForcing(nn.Dropout):
     Applies Dropout as partial teacher forcing. Therefore, scaling of the Dropout is reverted,
     so that the partial teacher forcing sets the values to the original observation.
     """
+
     def forward(self, input: Tensor) -> Tensor:
         if not self.training or self.p == 0:
             return input
