@@ -13,6 +13,11 @@ Afterwards you can import prosper_nn with:
 
 `import prosper_nn`
 
+## Contribution
+
+Everyone is invited to contribute to the package. If you want to do so, prior to submitting a merge request, please download the [contributor license agreement](docs/source/contriubte/prosper_nn_cla.pdf).
+After you signed the file, please send it to prosper_nn@iis.fraunhofer.de. Afterwards, the maintainer will consider your merge request.
+
 ## Acknowledgments
 
 This work was supported by the Bavarian Ministry of Economic Affairs, Regional Development and Energy through the Center for Analytics – Data – Applications (ADA-Center) within the framework of „BAYERN DIGITAL II“ (20-3410-2-9-8)

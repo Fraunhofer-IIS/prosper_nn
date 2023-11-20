@@ -25,6 +25,7 @@ Furthermore, you can have a look at different `tutorials <tutorials/index.rst>`_
    install/index
    api/index
    tutorials/index
+   contribute/index
    authors
    license
 
