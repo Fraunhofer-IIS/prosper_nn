@@ -157,16 +157,17 @@ class DHCNN(nn.Module):
         """
         self._check_sizes(Y)
         self.batchsize = Y.shape[1]
+        device = self.init_state.device
 
         if self.decrease_teacher_forcing > 0:
             self._adjust_teacher_forcing()
 
         # reset saved cell outputs
         past_error = torch.zeros(
-            self.deepness, self.past_horizon, self.batchsize, self.n_features_Y
+            (self.deepness, self.past_horizon, self.batchsize, self.n_features_Y), device=device
         )
         forecast = torch.zeros(
-            self.deepness, self.forecast_horizon, self.batchsize, self.n_features_Y
+            (self.deepness, self.forecast_horizon, self.batchsize, self.n_features_Y), device=device
         )
 
         # LSTM: Keep entries of diagonal matrix between 0 and 1.

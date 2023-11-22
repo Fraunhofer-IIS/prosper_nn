@@ -174,6 +174,8 @@ class CRCNN(nn.Module):
 
         self._check_sizes(Y)
 
+        device = self.init_state_causal.device
+
         if self.mirroring:
             future_bias = self.future_bias
         else:
@@ -181,13 +183,14 @@ class CRCNN(nn.Module):
 
         # reset saved cell outputs
         past_error = torch.zeros(
-            self.n_branches - 1, self.past_horizon, self.batchsize, self.n_features_Y
+            (self.n_branches - 1, self.past_horizon, self.batchsize, self.n_features_Y), device=device
         )
         forecast = torch.zeros(
-            self.n_branches - 1,
+            (self.n_branches - 1,
             self.forecast_horizon,
             self.batchsize,
-            self.n_features_Y,
+            self.n_features_Y,),
+            device=device
         )
 
         # initialize causal and retro-causal branches

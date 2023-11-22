@@ -179,13 +179,14 @@ class ECNN(torch.nn.Module):
             diag_entries = torch.clamp(self.ecnn_cell.D.weight.data, 0, 1)
             self.ecnn_cell.D.weight.data = torch.nn.Parameter(diag_entries)
 
+        device = self.init_state.device
         # Check sizes of input and output
         self.check_sizes(U, Y)
         batchsize = U.shape[1]
 
-        past_error = torch.empty(size=(self.past_horizon, batchsize, self.n_features_Y))
+        past_error = torch.empty(size=(self.past_horizon, batchsize, self.n_features_Y), device=device)
         forecast = torch.empty(
-            size=(self.forecast_horizon, batchsize, self.n_features_Y)
+            size=(self.forecast_horizon, batchsize, self.n_features_Y), device=device
         )
 
         approach = self.approach

@@ -24,7 +24,7 @@ Propser_nn is free software: you can redistribute it and/or modify
 
 import torch.nn as nn
 import torch
-from typing import List, Optional, Type
+from typing import Optional, Type
 from prosper_nn.models.hcnn_known_u import hcnn_known_u_cell
 
 
@@ -161,15 +161,15 @@ class HCNN_KNOWN_U(nn.Module):
             forecast_horizon. Both can be used for backpropagation.
             shape=(past_horizon+forecast_horizon, batchsize, n_features_Y)
         """
-
+        device = self.init_state.device
         self.state[0] = self.init_state
 
         self._check_sizes(U, Y)
         batchsize = Y.shape[1]
 
         # reset saved cell outputs
-        past_error = torch.zeros(self.past_horizon, batchsize, self.n_features_Y)
-        forecast = torch.zeros(self.forecast_horizon, batchsize, self.n_features_Y)
+        past_error = torch.zeros((self.past_horizon, batchsize, self.n_features_Y), device=device)
+        forecast = torch.zeros((self.forecast_horizon, batchsize, self.n_features_Y), device=device)
 
         # past
         for t in range(self.past_horizon):
