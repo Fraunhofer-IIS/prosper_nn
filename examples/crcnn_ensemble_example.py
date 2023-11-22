@@ -28,7 +28,9 @@ n_models = 2
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # %% Create data and targets
-targets = torch.zeros((n_models, n_branches - 1, past_horizon, batchsize, n_features_Y), device=device)
+targets = torch.zeros(
+    (n_models, n_branches - 1, past_horizon, batchsize, n_features_Y), device=device
+)
 
 # generate data with "unknown" variables U
 n_features_U = 5
@@ -87,13 +89,21 @@ for epoch in range(epochs):
 
 # %% Evaluation
 # Visualization of the expected timeseries
-expected_timeseries = torch.cat(
-    (torch.add(mean_errors, Y_batches[-1, :past_horizon]), mean_forecasts), dim=0
-).detach().cpu()
-expected_timeseries_outputs = torch.cat(
-    (torch.add(past_errors[:, -1], Y_batches[-1, :past_horizon]), forecasts[:, -1]),
-    dim=1,
-).detach().cpu()
+expected_timeseries = (
+    torch.cat(
+        (torch.add(mean_errors, Y_batches[-1, :past_horizon]), mean_forecasts), dim=0
+    )
+    .detach()
+    .cpu()
+)
+expected_timeseries_outputs = (
+    torch.cat(
+        (torch.add(past_errors[:, -1], Y_batches[-1, :past_horizon]), forecasts[:, -1]),
+        dim=1,
+    )
+    .detach()
+    .cpu()
+)
 
 visualize_forecasts.plot_time_series(
     expected_time_series=expected_timeseries[:, 0, 0],

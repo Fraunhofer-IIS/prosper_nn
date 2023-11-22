@@ -136,7 +136,9 @@ with torch.no_grad():
     example_pred_compressed_Y = autoencoder.encode(example_pred_Y.to(device))
 
     # feeding compressed Y and input U through the ecnn model
-    ecnn_output = ecnn_model(example_pred_U.to(device), example_pred_compressed_Y[0:past_horizon])
+    ecnn_output = ecnn_model(
+        example_pred_U.to(device), example_pred_compressed_Y[0:past_horizon]
+    )
     past_predictions_compressed, forecast_compressed = torch.split(
         ecnn_output, past_horizon
     )
@@ -149,7 +151,10 @@ with torch.no_grad():
     # adding Y to model's past prediction and concatenating it with the model's forecast
     forecast_timeseries = (
         torch.cat(
-            (torch.add(past_predictions, example_pred_Y[:past_horizon].to(device)), forecast),
+            (
+                torch.add(past_predictions, example_pred_Y[:past_horizon].to(device)),
+                forecast,
+            ),
             dim=0,
         )
         .detach()

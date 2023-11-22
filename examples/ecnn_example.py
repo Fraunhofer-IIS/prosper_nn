@@ -91,12 +91,18 @@ example_pred_Y = torch.reshape(
 with torch.no_grad():
     ecnn_model.eval()
 
-    model_output = ecnn_model(example_pred_U.to(device), example_pred_Y[:past_horizon].to(device))
+    model_output = ecnn_model(
+        example_pred_U.to(device), example_pred_Y[:past_horizon].to(device)
+    )
     past_errors, forecast = torch.split(model_output, past_horizon)
     print("Forecast: {}".format(forecast))
     expected_timeseries = (
         torch.cat(
-            (torch.add(past_errors.cpu(), example_pred_Y[:past_horizon]), forecast.cpu()), dim=0
+            (
+                torch.add(past_errors.cpu(), example_pred_Y[:past_horizon]),
+                forecast.cpu(),
+            ),
+            dim=0,
         )
         .detach()
         .squeeze()
@@ -119,4 +125,6 @@ with torch.no_grad():
         model_output = ecnn_model(U_batch, Y_batch)
         states_for_correlation[batch_index, :, :] = ecnn_model.state[past_horizon]
     states_for_correlation = states_for_correlation.reshape((-1, n_state_neurons))
-    corr_matrix, max_corr, ind_neurons = nchl.hl_size_analysis(states_for_correlation.cpu())
+    corr_matrix, max_corr, ind_neurons = nchl.hl_size_analysis(
+        states_for_correlation.cpu()
+    )

@@ -73,9 +73,17 @@ for epoch in range(epochs):
 
 # %% Evaluation
 # Visualization of the expected timeseries
-expected_timeseries = torch.cat(
-    (torch.add(past_error.squeeze(), Y[:past_horizon].to(device)), forecast.squeeze()), dim=0
-).detach().cpu()
+expected_timeseries = (
+    torch.cat(
+        (
+            torch.add(past_error.squeeze(), Y[:past_horizon].to(device)),
+            forecast.squeeze(),
+        ),
+        dim=0,
+    )
+    .detach()
+    .cpu()
+)
 
 visualize_forecasts.plot_time_series(
     expected_time_series=expected_timeseries[:, 0],

@@ -52,7 +52,9 @@ crcnn_model1 = crcnn.CRCNN(
     mirroring=False,
 ).to(device)
 
-targets_past = torch.zeros((n_branches - 1, past_horizon, 1, n_features_Y), device=device)
+targets_past = torch.zeros(
+    (n_branches - 1, past_horizon, 1, n_features_Y), device=device
+)
 optimizer = optim.Adam(crcnn_model1.parameters(), lr=0.001)
 loss_function = nn.MSELoss()
 
@@ -89,7 +91,9 @@ crcnn_model2 = crcnn.CRCNN(
 optimizer = optim.Adam(crcnn_model2.parameters(), lr=0.001)
 loss_function = nn.MSELoss()
 
-targets_past = torch.zeros((n_branches - 1, past_horizon, 1, n_features_Y), device=device)
+targets_past = torch.zeros(
+    (n_branches - 1, past_horizon, 1, n_features_Y), device=device
+)
 targets_future = torch.zeros((forecast_horizon, 1, n_features_Y), device=device)
 
 epochs = 10
@@ -125,7 +129,9 @@ crcnn_model3 = crcnn.CRCNN(
     mirroring=True,
 ).to(device)
 
-targets_past = torch.zeros((n_branches - 1, past_horizon, batchsize, n_features_Y), device=device)
+targets_past = torch.zeros(
+    (n_branches - 1, past_horizon, batchsize, n_features_Y), device=device
+)
 targets_future = torch.zeros((forecast_horizon, batchsize, n_features_Y), device=device)
 optimizer = optim.Adam(crcnn_model3.parameters(), lr=0.001)
 loss_function = nn.MSELoss()
@@ -133,7 +139,9 @@ epochs = 10
 total_loss = epochs * [0]
 
 # the bias is saved, because it differs for each input, but should be learned across epochs
-Bias = torch.zeros((Y_batches.shape[0], forecast_horizon, batchsize, n_features_Y), device=device)
+Bias = torch.zeros(
+    (Y_batches.shape[0], forecast_horizon, batchsize, n_features_Y), device=device
+)
 
 for epoch in range(epochs):
     for batch_index in range(0, Y_batches.shape[0]):
@@ -171,10 +179,17 @@ with torch.no_grad():
     past_error1, forecast1 = torch.split(model_output1, past_horizon, dim=1)
     forecast1 = forecast1[-1]
 
-    expected_timeseries1 = torch.cat(
-        (torch.add(past_error1[-1].squeeze(), Y[:past_horizon]), forecast1.squeeze()),
-        dim=0,
-    ).detach().cpu()
+    expected_timeseries1 = (
+        torch.cat(
+            (
+                torch.add(past_error1[-1].squeeze(), Y[:past_horizon]),
+                forecast1.squeeze(),
+            ),
+            dim=0,
+        )
+        .detach()
+        .cpu()
+    )
     for y in range(n_features_Y):
         visualize_forecasts.plot_time_series(
             expected_time_series=expected_timeseries1[:, y],
@@ -191,10 +206,17 @@ with torch.no_grad():
     past_error2, forecast2 = torch.split(model_output2, past_horizon, dim=1)
     forecast2 = forecast2[-1]
 
-    expected_timeseries2 = torch.cat(
-        (torch.add(past_error2[-1].squeeze(), Y[:past_horizon]), forecast2.squeeze()),
-        dim=0,
-    ).detach().cpu()
+    expected_timeseries2 = (
+        torch.cat(
+            (
+                torch.add(past_error2[-1].squeeze(), Y[:past_horizon]),
+                forecast2.squeeze(),
+            ),
+            dim=0,
+        )
+        .detach()
+        .cpu()
+    )
     for y in range(n_features_Y):
         visualize_forecasts.plot_time_series(
             expected_time_series=expected_timeseries2[:, y],
@@ -215,10 +237,17 @@ with torch.no_grad():
     past_error3, forecast3 = torch.split(model_output3, past_horizon, dim=1)
     forecast3 = forecast3[-1]
 
-    expected_timeseries3 = torch.cat(
-        (torch.add(past_error3[-1].squeeze(), Y[:past_horizon]), forecast3.squeeze()),
-        dim=0,
-    ).detach().cpu()
+    expected_timeseries3 = (
+        torch.cat(
+            (
+                torch.add(past_error3[-1].squeeze(), Y[:past_horizon]),
+                forecast3.squeeze(),
+            ),
+            dim=0,
+        )
+        .detach()
+        .cpu()
+    )
     for y in range(n_features_Y):
         visualize_forecasts.plot_time_series(
             expected_time_series=expected_timeseries3[:, y],

@@ -77,13 +77,22 @@ for epoch in range(epochs):
 
 # %% Evaluation
 # Visualization of the expected timeseries
-expected_timeseries = torch.cat(
-    (torch.add(mean[:past_horizon], Y_batches[-1, :past_horizon]), mean[past_horizon:]),
-    dim=0,
-).detach().cpu()
-expected_timeseries_outputs = torch.cat(
-    (torch.add(past_errors, Y_batches[-1, :past_horizon]), forecasts), dim=1
-).detach().cpu()
+expected_timeseries = (
+    torch.cat(
+        (
+            torch.add(mean[:past_horizon], Y_batches[-1, :past_horizon]),
+            mean[past_horizon:],
+        ),
+        dim=0,
+    )
+    .detach()
+    .cpu()
+)
+expected_timeseries_outputs = (
+    torch.cat((torch.add(past_errors, Y_batches[-1, :past_horizon]), forecasts), dim=1)
+    .detach()
+    .cpu()
+)
 
 visualize_forecasts.plot_time_series(
     expected_time_series=expected_timeseries[:, 0, 0],

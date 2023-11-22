@@ -99,7 +99,9 @@ example_pred_Y = Y[: (past_horizon + forecast_horizon)].unsqueeze(dim=1)
 with torch.no_grad():
     ensemble_model.eval()
 
-    ensemble_output = ensemble_model(example_pred_U.to(device), example_pred_Y[:past_horizon].to(device))
+    ensemble_output = ensemble_model(
+        example_pred_U.to(device), example_pred_Y[:past_horizon].to(device)
+    )
     _, ensemble_forecast = torch.split(ensemble_output, past_horizon, dim=1)
 
     mean_forecast = ensemble_forecast[-1]

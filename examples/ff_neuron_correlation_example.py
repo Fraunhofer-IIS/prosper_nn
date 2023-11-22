@@ -13,6 +13,7 @@ n_data = 10
 X = torch.rand([n_data, 100])
 Y = torch.rand([n_data, 1])
 
+
 # %% Initialize model
 class Net(nn.Module):
     def __init__(self):

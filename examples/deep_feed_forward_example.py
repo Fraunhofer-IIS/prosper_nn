@@ -51,4 +51,6 @@ for epoch in range(epochs):
 
 # %% Evaluation
 # Sensitivity Analysis
-sens_analysis.sensitivity_analysis(deepff.cpu(), X.cpu(), output_neuron=(0, 0), batchsize=1)
+sens_analysis.sensitivity_analysis(
+    deepff.cpu(), X.cpu(), output_neuron=(0, 0), batchsize=1
+)

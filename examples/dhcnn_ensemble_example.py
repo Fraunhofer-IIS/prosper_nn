@@ -31,14 +31,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # %% Create data and targets
 
-targets = torch.zeros((n_models, deepness, past_horizon, batchsize, n_features_Y), device=device)
+targets = torch.zeros(
+    (n_models, deepness, past_horizon, batchsize, n_features_Y), device=device
+)
 Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y - 1, n_features_U=1)
 Y = torch.cat((Y, U), 1)
 
 # Only use Y as input for the Dhcnn
 Y_batches = ci.create_input(Y, past_horizon, batchsize).to(device)
 
-#%% Initialize Dhcnn model and an ensemble of it
+# %% Initialize Dhcnn model and an ensemble of it
 dhcnn_model = dhcnn.DHCNN(
     n_state_neurons,
     n_features_Y,
@@ -84,11 +86,15 @@ for epoch in range(epochs):
 
 # %% Evaluation
 # Visualize expected timeseries
-expected_timeseries = torch.cat(
-    (
-        torch.add(mean[-1, :past_horizon], Y_batches[-1, :past_horizon]),
-        mean[-1, past_horizon:],
-    ),
-    dim=0,
-).detach().cpu()
+expected_timeseries = (
+    torch.cat(
+        (
+            torch.add(mean[-1, :past_horizon], Y_batches[-1, :past_horizon]),
+            mean[-1, past_horizon:],
+        ),
+        dim=0,
+    )
+    .detach()
+    .cpu()
+)
 visualize_forecasts.plot_time_series(expected_timeseries[:, 0, 0])

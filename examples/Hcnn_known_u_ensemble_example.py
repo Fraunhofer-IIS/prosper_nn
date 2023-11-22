@@ -1,4 +1,4 @@
-#%%
+# %%
 import sys, os
 
 sys.path.append(os.path.abspath(".."))
@@ -90,7 +90,7 @@ for epoch in range(epochs):
         optimizer.step()
         total_loss[epoch] += loss.detach()
 
-#%% Create Forecast
+# %% Create Forecast
 U_forecast = U_batches[0, :, 0].unsqueeze(1)
 Y_forecast = Y_batches[0, :, 0].unsqueeze(1)
 
@@ -105,19 +105,23 @@ with torch.no_grad():
     print("Forecast: \n{}".format(mean_forecast))
 
 
-#%%
+# %%
 # work in progress--
 # Visualization of the expected timeseries
-expected_timeseries = torch.cat(
-    (
-        torch.add(mean_past_error.squeeze(0)[:past_horizon], Y_forecast),
-        mean_forecast.squeeze(0),
-    ),
-    dim=0,
-).squeeze(1).cpu()
-expected_timeseries_outputs = torch.cat(
-    (torch.add(past_errors, Y_forecast), forecasts), dim=1
-).squeeze(2).cpu()
+expected_timeseries = (
+    torch.cat(
+        (
+            torch.add(mean_past_error.squeeze(0)[:past_horizon], Y_forecast),
+            mean_forecast.squeeze(0),
+        ),
+        dim=0,
+    )
+    .squeeze(1)
+    .cpu()
+)
+expected_timeseries_outputs = (
+    torch.cat((torch.add(past_errors, Y_forecast), forecasts), dim=1).squeeze(2).cpu()
+)
 
 # plot for first feature of Y
 visualize_forecasts.plot_time_series(

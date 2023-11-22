@@ -1,4 +1,4 @@
-#%%
+# %%
 import sys, os
 
 sys.path.append(os.path.abspath(".."))
@@ -58,7 +58,7 @@ hcnn_known_u_model = hcnn_known_u.HCNN_KNOWN_U(
 optimizer = optim.Adam(hcnn_known_u_model.parameters(), lr=0.01)
 loss_function = nn.MSELoss()
 targets = torch.zeros((past_horizon, batchsize, n_features_Y), device=device)
-#%%
+# %%
 # Train model
 epochs = 150
 total_loss = epochs * [0]
@@ -77,14 +77,22 @@ print("training is complete")
 # %%
 # Prediction
 # Example data for prediction
-example_pred_U = torch.reshape(
-    U[0 : (past_horizon + forecast_horizon), :],
-    (past_horizon + forecast_horizon, 1, n_features_U),
-).float().to(device)
-example_pred_Y = torch.reshape(
-    Y[0 : (past_horizon + forecast_horizon), :],
-    (past_horizon + forecast_horizon, 1, n_features_Y),
-).float().to(device)
+example_pred_U = (
+    torch.reshape(
+        U[0 : (past_horizon + forecast_horizon), :],
+        (past_horizon + forecast_horizon, 1, n_features_U),
+    )
+    .float()
+    .to(device)
+)
+example_pred_Y = (
+    torch.reshape(
+        Y[0 : (past_horizon + forecast_horizon), :],
+        (past_horizon + forecast_horizon, 1, n_features_Y),
+    )
+    .float()
+    .to(device)
+)
 # Predict with trained model
 with torch.no_grad():
     hcnn_known_u_model.eval()
