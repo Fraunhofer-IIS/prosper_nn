@@ -26,15 +26,17 @@ n_batches = 2
 sparsity = 0.2
 n_models = 3
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # %% Create data and targets
-targets = torch.zeros((past_horizon, batchsize, n_features_Y))
+targets = torch.zeros((past_horizon, batchsize, n_features_Y), device=device)
 
 # generate data with "unknown" variables U
 Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y - 1, n_features_U=1)
 Y = torch.cat((Y, U), 1)
 
 # Only use Y as input for the Hcnn
-Y_batches = ci.create_input(Y, past_horizon, batchsize)
+Y_batches = ci.create_input(Y, past_horizon, batchsize).to(device)
 
 # %% Initialize Hcnn and an ensemble of it
 hcnn_model = hcnn.HCNN(
@@ -47,10 +49,10 @@ hcnn_ensemble = ensemble.Ensemble(
     sparsity=sparsity,
     keep_pruning_mask=False,
     initializer=torch.nn.init.kaiming_uniform_,
-)
+).to(device)
 
 # %% Train model
-optimizer1 = optim.Adam(hcnn_ensemble.parameters(), lr=0.001)
+optimizer = optim.Adam(hcnn_ensemble.parameters(), lr=0.001)
 loss_function = nn.MSELoss()
 
 epochs = 5
@@ -66,30 +68,22 @@ for epoch in range(epochs):
         mean = torch.squeeze(mean, 0)
         past_errors, forecasts = torch.split(outputs, past_horizon, dim=1)
 
-        losses = [
-            loss_function(past_errors[j][i], targets[i])
-            for j in range(n_models)
-            for i in range(past_horizon)
-        ]
-        loss = sum(losses) / (n_models * past_horizon)
-        loss.backward()
-        optimizer1.step()
+        loss = loss_function(mean[:past_horizon], targets)
 
-        mean_loss = (
-            sum([loss_function(mean[i], targets[i]) for i in range(past_horizon)])
-            / past_horizon
-        )
-        total_loss[epoch] += mean_loss.detach()
+        loss.backward()
+        optimizer.step()
+
+        total_loss[epoch] += loss.detach()
 
 # %% Evaluation
 # Visualization of the expected timeseries
 expected_timeseries = torch.cat(
     (torch.add(mean[:past_horizon], Y_batches[-1, :past_horizon]), mean[past_horizon:]),
     dim=0,
-).detach()
+).detach().cpu()
 expected_timeseries_outputs = torch.cat(
     (torch.add(past_errors, Y_batches[-1, :past_horizon]), forecasts), dim=1
-).detach()
+).detach().cpu()
 
 visualize_forecasts.plot_time_series(
     expected_time_series=expected_timeseries[:, 0, 0],
@@ -99,8 +93,8 @@ visualize_forecasts.plot_time_series(
 visualize_forecasts.heatmap_forecasts(expected_timeseries_outputs[:, :, 0, 0].T)
 # Show sensitivity for one single output neuron
 sensitivity_analysis.sensitivity_analysis(
-    hcnn_ensemble,
-    Y_batches[:, :past_horizon],
+    hcnn_ensemble.cpu(),
+    Y_batches[:, :past_horizon].cpu(),
     output_neuron=(-1, 10, slice(0, batchsize), 0),
     batchsize=2,
 )

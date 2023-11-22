@@ -28,10 +28,12 @@ deepness = 3
 teacher_forcing = 1
 decrease_teacher_forcing = 0.0001
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # %% Create data and targets
-targets = torch.zeros((past_horizon, batchsize, n_features_Y))
+targets = torch.zeros((deepness, past_horizon, batchsize, n_features_Y), device=device)
 Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y - 1, n_features_U=1)
-Y = torch.cat((Y, U), 1)
+Y = torch.cat((Y, U), 1).to(device)
 
 # Only use Y as input for the Dhcnn
 Y_batches = ci.create_input(Y, past_horizon, batchsize)
@@ -47,7 +49,7 @@ dhcnn_model = dhcnn.DHCNN(
     activation=torch.tanh,
     teacher_forcing=teacher_forcing,
     decrease_teacher_forcing=decrease_teacher_forcing,
-)
+).to(device)
 
 # %% Train model
 optimizer = optim.Adam(dhcnn_model.parameters(), lr=0.001)
@@ -64,12 +66,8 @@ for epoch in range(epochs):
         output = dhcnn_model(Y_batch)
         past_error, forecast = torch.split(output, past_horizon, dim=1)
 
-        losses = [
-            loss_function(past_error[i][j], targets[j])
-            for i in range(deepness)
-            for j in range(past_horizon)
-        ]
-        loss = sum(losses) / (deepness * past_horizon)
+        loss = loss_function(past_error, targets)
+
         loss.backward()
         optimizer.step()
 
@@ -79,6 +77,6 @@ for epoch in range(epochs):
 # Visualize expected timeseries
 expected_timeseries = torch.cat(
     (torch.add(past_error[-1], Y_batches[-1, :past_horizon]), forecast[-1]), dim=0
-).detach()
+).detach().cpu()
 visualize_forecasts.plot_time_series(expected_timeseries[:, 0, 0])
 # %%

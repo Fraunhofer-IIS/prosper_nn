@@ -26,14 +26,17 @@ n_batches = 2
 sparsity = 0
 deepness = 3
 n_models = 3
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # %% Create data and targets
 
-targets = torch.zeros((past_horizon, batchsize, n_features_Y))
+targets = torch.zeros((n_models, deepness, past_horizon, batchsize, n_features_Y), device=device)
 Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y - 1, n_features_U=1)
 Y = torch.cat((Y, U), 1)
 
 # Only use Y as input for the Dhcnn
-Y_batches = ci.create_input(Y, past_horizon, batchsize)
+Y_batches = ci.create_input(Y, past_horizon, batchsize).to(device)
 
 #%% Initialize Dhcnn model and an ensemble of it
 dhcnn_model = dhcnn.DHCNN(
@@ -52,7 +55,7 @@ dhcnn_ensemble = ensemble.Ensemble(
     sparsity=sparsity,
     keep_pruning_mask=False,
     initializer=torch.nn.init.kaiming_uniform_,
-)
+).to(device)
 
 # %% Train model
 optimizer1 = optim.Adam(dhcnn_ensemble.parameters(), lr=0.001)
@@ -71,20 +74,12 @@ for epoch in range(epochs):
         past_errors, forecasts = torch.split(outputs, past_horizon, dim=2)
         mean = torch.squeeze(mean, 0)
 
-        losses = [
-            loss_function(past_errors[k][i][j], targets[j])
-            for i in range(deepness)
-            for j in range(past_horizon)
-            for k in range(n_models)
-        ]
-        loss = sum(losses) / (deepness * past_horizon * n_models)
+        loss = loss_function(past_errors, targets)
+
         loss.backward()
         optimizer1.step()
 
-        mean_loss = (
-            sum([loss_function(mean[-1, i], targets[i]) for i in range(past_horizon)])
-            / past_horizon
-        )
+        mean_loss = loss_function(mean[:, :past_horizon], targets[0])
         total_loss[epoch] += mean_loss.detach()
 
 # %% Evaluation
@@ -95,5 +90,5 @@ expected_timeseries = torch.cat(
         mean[-1, past_horizon:],
     ),
     dim=0,
-).detach()
+).detach().cpu()
 visualize_forecasts.plot_time_series(expected_timeseries[:, 0, 0])

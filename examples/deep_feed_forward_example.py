@@ -17,9 +17,11 @@ n_data = 100
 deepness = 3
 epochs = 100
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # %% Create dummy data
-X = torch.randn([n_data, input_dim])
-Y = torch.randn([n_data, output_dim])
+X = torch.randn([n_data, input_dim]).to(device)
+Y = torch.randn([n_data, output_dim]).to(device)
 
 # %% Initialize Model
 deepff = deepff.DeepFeedForward(
@@ -29,7 +31,7 @@ deepff = deepff.DeepFeedForward(
     deepness=deepness,
     dropout_rate=0.0,
     activation=torch.tanh,
-)
+).to(device)
 
 # %% Train Model
 optimizer = optim.Adam(deepff.parameters(), lr=0.001)
@@ -41,14 +43,12 @@ for epoch in range(epochs):
         deepff.zero_grad()
 
         output = deepff(x)
-        losses = sum([loss_function(output[i], y) for i in range(deepness)]) / deepness
-        epoch_loss += losses
-        losses.backward()
+        loss = loss_function(output, y.repeat(deepness, output_dim))
+        epoch_loss += loss
+        loss.backward()
         optimizer.step()
 
-    if epoch % 100 == 99:
-        print(epoch)
 
 # %% Evaluation
 # Sensitivity Analysis
-sens_analysis.sensitivity_analysis(deepff, X, output_neuron=(0, 0), batchsize=1)
+sens_analysis.sensitivity_analysis(deepff.cpu(), X.cpu(), output_neuron=(0, 0), batchsize=1)

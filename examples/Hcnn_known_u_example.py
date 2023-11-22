@@ -27,12 +27,18 @@ n_features_Y = 5
 sparsity = 0
 teacher_forcing = 1
 decrease_teacher_forcing = 0.0001
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # %%
 #  Generate data
 Y, U = gtsd.sample_data(n_data, n_features_Y, n_features_U)
 Y_batches, U_batches = ci.create_input(
     Y, past_horizon, batchsize, U, future_U, forecast_horizon
 )
+
+Y_batches = Y_batches.to(device)
+U_batches = U_batches.to(device)
 
 Y_batches.shape, U_batches.shape
 # %%
@@ -46,12 +52,12 @@ hcnn_known_u_model = hcnn_known_u.HCNN_KNOWN_U(
     sparsity,
     teacher_forcing=teacher_forcing,
     decrease_teacher_forcing=decrease_teacher_forcing,
-)
+).to(device)
 # %%
 # setting the optimizer, loss and targets
 optimizer = optim.Adam(hcnn_known_u_model.parameters(), lr=0.01)
 loss_function = nn.MSELoss()
-targets = torch.zeros((past_horizon, batchsize, n_features_Y))
+targets = torch.zeros((past_horizon, batchsize, n_features_Y), device=device)
 #%%
 # Train model
 epochs = 150
@@ -63,8 +69,7 @@ for epoch in range(epochs):
         Y_batch = Y_batches[batch_index]
         model_out = hcnn_known_u_model(U_batch, Y_batch)
         past_error, forecast = torch.split(model_out, past_horizon)
-        losses = [loss_function(past_error[i], targets[i]) for i in range(past_horizon)]
-        loss = sum(losses)
+        loss = loss_function(past_error, targets)
         loss.backward()
         optimizer.step()
         total_loss[epoch] += loss.detach()
@@ -75,11 +80,11 @@ print("training is complete")
 example_pred_U = torch.reshape(
     U[0 : (past_horizon + forecast_horizon), :],
     (past_horizon + forecast_horizon, 1, n_features_U),
-).float()
+).float().to(device)
 example_pred_Y = torch.reshape(
     Y[0 : (past_horizon + forecast_horizon), :],
     (past_horizon + forecast_horizon, 1, n_features_Y),
-).float()
+).float().to(device)
 # Predict with trained model
 with torch.no_grad():
     hcnn_known_u_model.eval()
@@ -93,9 +98,10 @@ with torch.no_grad():
         )
         .detach()
         .squeeze()
+        .cpu()
     )
     visualize_forecasts.plot_time_series(
-        expected_timeseries, example_pred_Y.squeeze(1)[:, 0]
+        expected_timeseries, example_pred_Y.squeeze(1)[:, 0].cpu()
     )
 
     # neuron correlation analysis to check size of hidden layer (= n_state_neurons)
@@ -105,9 +111,9 @@ with torch.no_grad():
     for batch_index in range(0, U_batches.shape[0]):
         U_batch = U_batches[batch_index]
         Y_batch = Y_batches[batch_index]
-        model_output = hcnn_known_u_model(U_batch, Y_batch)
+        hcnn_known_u_model(U_batch, Y_batch)
         states_for_correlation[batch_index] = hcnn_known_u_model.state[
             past_horizon
-        ]
+        ].cpu()
     states_for_correlation = states_for_correlation.reshape((-1, n_state_neurons))
     corr_matrix, max_corr, ind_neurons = nchl.hl_size_analysis(states_for_correlation)
