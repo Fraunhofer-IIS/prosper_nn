@@ -9,9 +9,7 @@ n_batches = 100
 batchsize = 5
 
 # Initialise Deep Feedforward Neural Network
-ff_model = FFNN(input_dim=input_dim,
-                hidden_dim=hidden_dim,
-                output_dim=output_dim)
+ff_model = FFNN(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim)
 
 X = torch.randn([n_batches, batchsize, input_dim])
 Y = torch.randn([n_batches, batchsize, output_dim])
