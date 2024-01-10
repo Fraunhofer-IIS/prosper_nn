@@ -14,9 +14,9 @@ batchsize = 5
 
 # Initialise Historical Consistant Neural Network
 hcnn_model = HCNN(n_state_neurons, n_features_Y, past_horizon, forecast_horizon)
-                  
+
 # Generate data with "unknown" variables U
-Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y-1, n_features_U=1)
+Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y - 1, n_features_U=1)
 Y = torch.cat((Y, U), 1)
 Y_batches = ci.create_input(Y, past_horizon, batchsize)
 
@@ -33,7 +33,6 @@ for epoch in range(10):
         past_error, forecast = torch.split(model_output, past_horizon)
 
         hcnn_model.zero_grad()
-        loss = sum([loss_function(past_error[i], targets[i])
-            for i in range(past_horizon)]) / past_horizon
+        loss = loss_function(past_error, targets)
         loss.backward()
         optimizer.step()
