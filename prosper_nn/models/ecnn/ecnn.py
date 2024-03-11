@@ -176,14 +176,15 @@ class ECNN(torch.nn.Module):
             forecast_horizon. Both can be used for backpropagation.
             shape=(past_horizon+forecast_horizon, batchsize, n_features_Y)
         """
-
+        device = self.init_state.device
+        
         # Check sizes of input and output
         self.check_sizes(U, Y)
         batchsize = U.shape[1]
 
-        past_error = torch.empty(size=(self.past_horizon, batchsize, self.n_features_Y))
+        past_error = torch.empty(size=(self.past_horizon, batchsize, self.n_features_Y), device=device)
         forecast = torch.empty(
-            size=(self.forecast_horizon, batchsize, self.n_features_Y)
+            size=(self.forecast_horizon, batchsize, self.n_features_Y), device=device
         )
 
         approach = self.approach

@@ -17,11 +17,11 @@ batchsize = 5
 dhcnn = DHCNN(n_state_neurons, n_features_Y, past_horizon, forecast_horizon, deepness)
 
 # Generate data with "unknown" variables U
-Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y-1, n_features_U=1)
+Y, U = gtsd.sample_data(n_data, n_features_Y=n_features_Y - 1, n_features_U=1)
 Y = torch.cat((Y, U), 1)
 Y_batches = ci.create_input(Y, past_horizon, batchsize)
 
-targets = torch.zeros((past_horizon, batchsize, n_features_Y))
+targets = torch.zeros((deepness, past_horizon, batchsize, n_features_Y))
 
 # Train model
 optimizer = torch.optim.Adam(dhcnn.parameters())
@@ -34,7 +34,6 @@ for epoch in range(10):
         past_errors, forecast = torch.split(model_output, past_horizon, dim=1)
 
         dhcnn.zero_grad()
-        loss = sum([loss_function(past_errors[k, i], targets[i]) for i in range(past_horizon)
-            for k in range(deepness)]) / (past_horizon * deepness)
+        loss = loss_function(past_errors, targets)
         loss.backward()
         optimizer.step()

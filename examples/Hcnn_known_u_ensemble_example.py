@@ -1,4 +1,4 @@
-#%%
+# %%
 import sys, os
 
 sys.path.append(os.path.abspath(".."))
@@ -10,7 +10,6 @@ import torch.optim as optim
 import prosper_nn.models.ensemble as ensemble
 import prosper_nn.utils.generate_time_series_data as gtsd
 import prosper_nn.utils.create_input_ecnn_hcnn as ci
-import prosper_nn.utils.neuron_correlation_hidden_layers as nchl
 from prosper_nn.utils import visualize_forecasts
 from prosper_nn.models.hcnn_known_u import hcnn_known_u
 
@@ -28,12 +27,18 @@ sparsity = 0
 teacher_forcing = 1
 decrease_teacher_forcing = 0.0001
 n_models = 10
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # %%
 #  Generate data
 Y, U = gtsd.sample_data(n_data, n_features_Y, n_features_U)
 Y_batches, U_batches = ci.create_input(
     Y, past_horizon, batchsize, U, future_U, forecast_horizon
 )
+
+Y_batches = Y_batches.to(device)
+U_batches = U_batches.to(device)
 
 
 # %%
@@ -55,15 +60,16 @@ hcnn_known_u_ensemble = ensemble.Ensemble(
     sparsity=sparsity,
     keep_pruning_mask=False,
     initializer=torch.nn.init.kaiming_uniform_,
-)
+).to(device)
+
 # %%
 # setting the optimizer, loss and targets
 optimizer = optim.Adam(hcnn_known_u_ensemble.parameters(), lr=0.01)
 loss_function = nn.MSELoss()
-targets = torch.zeros((past_horizon, batchsize, n_features_Y))
+targets = torch.zeros((past_horizon, batchsize, n_features_Y), device=device)
 # %%
 # Train model
-epochs = 150
+epochs = 10
 total_loss = epochs * [0]
 for epoch in range(epochs):
     for batch_index in range(0, U_batches.shape[0]):
@@ -78,21 +84,13 @@ for epoch in range(epochs):
 
         mean = torch.squeeze(mean, 0)
         past_errors, forecasts = torch.split(outputs, past_horizon, dim=1)
-        losses = [
-            loss_function(past_errors[j][i], targets[i])
-            for j in range(n_models)
-            for i in range(past_horizon)
-        ]
-        loss = sum(losses) / n_models * past_horizon
+        loss = loss_function(mean[:past_horizon], targets)
+
         loss.backward()
         optimizer.step()
-        mean_loss = (
-            sum([loss_function(mean[i], targets[i]) for i in range(past_horizon)])
-            / past_horizon
-        )
-        total_loss[epoch] += mean_loss.detach()
+        total_loss[epoch] += loss.detach()
 
-#%% Create Forecast
+# %% Create Forecast
 U_forecast = U_batches[0, :, 0].unsqueeze(1)
 Y_forecast = Y_batches[0, :, 0].unsqueeze(1)
 
@@ -107,24 +105,28 @@ with torch.no_grad():
     print("Forecast: \n{}".format(mean_forecast))
 
 
-#%%
+# %%
 # work in progress--
 # Visualization of the expected timeseries
-expected_timeseries = torch.cat(
-    (
-        torch.add(mean_past_error.squeeze(0)[:past_horizon], Y_forecast),
-        mean_forecast.squeeze(0),
-    ),
-    dim=0,
-).squeeze(1)
-expected_timeseries_outputs = torch.cat(
-    (torch.add(past_errors, Y_forecast), forecasts), dim=1
-).squeeze(2)
+expected_timeseries = (
+    torch.cat(
+        (
+            torch.add(mean_past_error.squeeze(0)[:past_horizon], Y_forecast),
+            mean_forecast.squeeze(0),
+        ),
+        dim=0,
+    )
+    .squeeze(1)
+    .cpu()
+)
+expected_timeseries_outputs = (
+    torch.cat((torch.add(past_errors, Y_forecast), forecasts), dim=1).squeeze(2).cpu()
+)
 
 # plot for first feature of Y
 visualize_forecasts.plot_time_series(
     expected_time_series=expected_timeseries[:, 0],
-    target=Y_forecast.squeeze(1)[:, 0],
+    target=Y_forecast.squeeze(1)[:, 0].cpu(),
     uncertainty=expected_timeseries_outputs[:, :, 0].T,
 )
 # Show uncertainty of submodels with heatmap

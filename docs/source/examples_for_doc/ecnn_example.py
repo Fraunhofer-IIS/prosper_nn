@@ -22,11 +22,13 @@ ecnn = ECNN(n_features_U,
 
 # Generate data
 Y, U = gtsd.sample_data(n_data, n_features_Y, n_features_U)
-Y_batches, U_batches = ci.create_input(Y=Y,
-                                       past_horizon=past_horizon,
-                                       batchsize=batchsize,
-                                       U=U,
-                                       forecast_horizon=forecast_horizon)
+Y_batches, U_batches = ci.create_input(
+    Y=Y,
+    past_horizon=past_horizon,
+    batchsize=batchsize,
+    U=U,
+    forecast_horizon=forecast_horizon,
+)
 
 targets = torch.zeros((past_horizon, batchsize, n_features_Y))
 
@@ -42,7 +44,6 @@ for epoch in range(10):
         past_error, forecast = torch.split(model_output, past_horizon)
 
         ecnn.zero_grad()
-        loss = sum([loss_function(past_error[i], targets[i])
-            for i in range(past_horizon)]) / past_horizon
+        loss = loss_function(past_error, targets)
         loss.backward()
         optimizer.step()

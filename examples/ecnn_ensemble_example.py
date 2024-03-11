@@ -29,14 +29,18 @@ n_data = 100
 n_features_Y = 2
 n_models = 3
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # %% Generate dummy data
 Y, U = gtsd.sample_data(n_data, n_features_Y, n_features_U)
 
 Y_batches, U_batches = ci.create_input(
     Y, past_horizon, batchsize, U, future_U, forecast_horizon
 )
+Y_batches = Y_batches.to(device)
+U_batches = U_batches.to(device)
 
-targets = torch.zeros((past_horizon, batchsize, n_features_Y))
+targets = torch.zeros((n_models, past_horizon, batchsize, n_features_Y), device=device)
 
 # Initialize Ecnn and an ensemble of it
 ecnn = ecnn.ECNN(
@@ -53,7 +57,7 @@ ecnn = ecnn.ECNN(
 
 ensemble_model = ensemble.Ensemble(
     model=ecnn, n_models=n_models, initializer=torch.nn.init.kaiming_uniform_
-)
+).to(device)
 
 # %% Train model
 
@@ -74,19 +78,12 @@ for epoch in range(epochs):
         mean = torch.squeeze(mean, 0)
         past_errors, forecasts = torch.split(outputs, past_horizon, dim=1)
 
-        losses = [
-            loss_function(past_errors[j][i], targets[i])
-            for j in range(n_models)
-            for i in range(past_horizon)
-        ]
-        loss = sum(losses) / (n_models * past_horizon)
+        loss = loss_function(past_errors, targets)
+
         loss.backward()
         optimizer.step()
 
-        mean_loss = (
-            sum([loss_function(mean[i], targets[i]) for i in range(past_horizon)])
-            / past_horizon
-        )
+        mean_loss = loss_function(mean[:past_horizon], targets[0])
         total_loss[epoch] += mean_loss.detach()
 
 # %% Prediction
@@ -101,7 +98,9 @@ example_pred_Y = Y[: (past_horizon + forecast_horizon)].unsqueeze(dim=1)
 with torch.no_grad():
     ensemble_model.eval()
 
-    ensemble_output = ensemble_model(example_pred_U, example_pred_Y[:past_horizon])
+    ensemble_output = ensemble_model(
+        example_pred_U.to(device), example_pred_Y[:past_horizon].to(device)
+    )
     _, ensemble_forecast = torch.split(ensemble_output, past_horizon, dim=1)
 
     mean_forecast = ensemble_forecast[-1]
