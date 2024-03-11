@@ -1,4 +1,3 @@
-""""""
 """
 Prosper_nn provides implementations for specialized time series forecasting
 neural networks and related utility functions.
@@ -24,8 +23,7 @@ Propser_nn is free software: you can redistribute it and/or modify
 
 import torch
 import torch.nn as nn
-from . import ecnn_cell, ecnn_gru_cell
-from typing import Tuple, Type
+from . import ecnn_cell
 
 
 class ECNN(torch.nn.Module):
@@ -69,11 +67,10 @@ class ECNN(torch.nn.Module):
         n_state_neurons: int,
         past_horizon: int,
         forecast_horizon: int = 1,
-        cell_type: str = "ecnn_cell",
+        recurrent_cell_type: str = "elman",
+        kwargs_recurrent_cell: dict = {},
         approach: str = "backward",
-        init_state: torch.Tensor = None,
         learn_init_state: bool = True,
-        activation: Type[torch.autograd.Function] = torch.tanh,
         n_features_Y: int = 1,
         future_U: bool = False,
     ) -> None:
@@ -91,24 +88,18 @@ class ECNN(torch.nn.Module):
             prediction.
         forecast_horizon: int
             The forecast horizon.
-
-        cell_type: str
-           Include a version of the gated recurrent unit.
-           Possible choices: ecnn_cell or ecnn_gru_3_variant.
+        recurrent_cell_type: str
+            Possible choices: elman, lstm, gru or gru_3_variant.
+        kwargs_recurrent_cell: dict
+            Parameters for the recurrent cell. Activation function can be set here.
         approach: string
             Either "backward" or "forward".
             A backward approach means that the external features at time t
             have a direct impact on the hidden state at time t.
             A forward approach means that the external features at time t
             only have a direct impact on the hidden state at time t+1.
-        init_state: torch.Tensor
-            The initial hidden state. If none is given, it is generated
-            randomly.
         learn_init_state: boolean
             Learn the initial hidden state or not.
-        activation : nn.functional
-            The activation function that is applied on the output of the hidden layers.
-            The same function is used on all hidden layers.
         n_features_Y: int
             The number of outputs, i.e. the number of elements of Y at each time
             step. The default is 1.
@@ -130,30 +121,38 @@ class ECNN(torch.nn.Module):
         self.n_state_neurons = n_state_neurons
         self.past_horizon = past_horizon
         self.forecast_horizon = forecast_horizon
-        self.cell_type = cell_type
         self.approach = approach
         self.future_U = future_U
+        self.learn_init_state = learn_init_state
+        self.recurrent_cell_type = recurrent_cell_type
 
         self._check_variables()
 
-        self.state = [torch.tensor] * (past_horizon + forecast_horizon + 1)
-
-        if cell_type == "ecnn_cell":
-            self.ECNNCell = ecnn_cell.ECNNCell(
-                n_features_U, n_state_neurons, activation, n_features_Y
-            )
-        elif cell_type == "ecnn_gru_3_variant":
-            self.ECNNCell = ecnn_gru_cell.ECNN_GRU_3_variant(
-                n_features_U, n_state_neurons, activation, n_features_Y
-            )
+        if recurrent_cell_type == 'lstm':
+            self.state = ([(torch.tensor, torch.tensor)] * (past_horizon + forecast_horizon + 1))
         else:
-            raise ValueError("Cell type is not found")
+            self.state = [torch.tensor] * (past_horizon + forecast_horizon + 1)
 
-        self.init_state = nn.Parameter(
-            torch.rand(1, n_state_neurons), requires_grad=learn_init_state
-        )
-        if init_state is not None:
-            self.init_state.data = init_state
+        self.ECNNCell = ecnn_cell.ECNNCell(
+                n_features_U, n_state_neurons, n_features_Y, recurrent_cell_type, kwargs_recurrent_cell
+            )
+
+        self.init_state = self.set_init_state()
+
+
+    def set_init_state(self):
+        if self.recurrent_cell_type == 'lstm':
+            init_state = (nn.Parameter(
+                torch.rand(1, self.n_state_neurons), requires_grad=self.learn_init_state
+            ), nn.Parameter(
+                torch.rand(1, self.n_state_neurons), requires_grad=self.learn_init_state
+            ))
+        else:
+            init_state = nn.Parameter(
+                torch.rand(1, self.n_state_neurons), requires_grad=self.learn_init_state
+            )
+        return init_state
+
 
     def forward(self, U: torch.Tensor, Y: torch.Tensor) -> torch.Tensor:
         """
@@ -176,13 +175,16 @@ class ECNN(torch.nn.Module):
             forecast_horizon. Both can be used for backpropagation.
             shape=(past_horizon+forecast_horizon, batchsize, n_features_Y)
         """
+
         device = self.init_state.device
-        
+
         # Check sizes of input and output
         self.check_sizes(U, Y)
         batchsize = U.shape[1]
 
-        past_error = torch.empty(size=(self.past_horizon, batchsize, self.n_features_Y), device=device)
+        past_error = torch.empty(
+            size=(self.past_horizon, batchsize, self.n_features_Y), device=device
+        )
         forecast = torch.empty(
             size=(self.forecast_horizon, batchsize, self.n_features_Y), device=device
         )
@@ -191,7 +193,7 @@ class ECNN(torch.nn.Module):
 
         if approach == "backward":
             # start
-            _, self.state[0] = self.ECNNCell(self.init_state.repeat(batchsize, 1), U[0])
+            _, self.state[0] = self.ECNNCell(self.repeat_init_state(batchsize), U[0])
             # past
             for t in range(1, self.past_horizon):
                 past_error[t - 1], self.state[t] = self.ECNNCell(
@@ -223,7 +225,7 @@ class ECNN(torch.nn.Module):
 
         if approach == "forward":
             # start
-            self.state[0] = self.init_state.repeat(batchsize, 1)
+            self.state[0] = self.self.repeat_init_state(batchsize)
             # past
             for t in range(1, self.past_horizon + 1):
                 past_error[t - 1], self.state[t] = self.ECNNCell(
@@ -246,6 +248,12 @@ class ECNN(torch.nn.Module):
                     )
 
         return torch.cat((past_error, forecast), dim=0)
+
+    def repeat_init_state(self, batchsize):
+        if self.recurrent_cell_type == 'lstm':
+            return self.init_state[0].repeat(batchsize, 1), self.init_state[1].repeat(batchsize, 1)
+        else:
+            return self.init_state.repeat(batchsize, 1)
 
     def check_sizes(self, U: torch.Tensor, Y: torch.Tensor) -> None:
         """Checks if U and Y have right shape."""
