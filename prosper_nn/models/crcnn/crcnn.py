@@ -174,7 +174,7 @@ class CRCNN(nn.Module):
 
         self._check_sizes(Y)
 
-        device = self.init_state_causal.device
+        device = self.CRCNNCell_causal.A.weight.device
 
         if self.mirroring:
             future_bias = self.future_bias
