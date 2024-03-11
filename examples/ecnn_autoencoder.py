@@ -15,9 +15,7 @@ from prosper_nn.models.autoencoder.autoencoder import Autoencoder
 
 import matplotlib.pyplot as plt
 
-
 # %% Define network parameters
-
 
 n_target_features = 10  # overall number of outputs / outputs of autoencoder
 n_features_U = 5  # input features of ecnn
@@ -29,12 +27,12 @@ n_features_Y = 3  # output features of ecnn / hidden neurons of autoencoder
 batchsize = 5
 init_state = torch.zeros(1, n_state_neurons)
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # %% Initialise ECNN, autoencoder
 
 # autoencoder
 autoencoder = Autoencoder(n_target_features, n_features_Y)
-
 
 # ecnn
 ecnn_model = ECNN(
@@ -51,7 +49,7 @@ ecnn_model = ECNN(
 )
 
 # module list to combine parameters of both models for training
-modules = nn.ModuleList([autoencoder, ecnn_model])
+modules = nn.ModuleList([autoencoder, ecnn_model]).to(device)
 
 # %% Creating dataset and targets
 
@@ -60,9 +58,11 @@ Y, U = gtsd.sample_data(n_data, n_target_features, n_features_U)
 Y_batches, U_batches = ci.create_input(
     Y, past_horizon, batchsize, U, future_U, forecast_horizon
 )
+Y_batches = Y_batches.to(device)
+U_batches = U_batches.to(device)
 
 # targets are 0 because of error correction architecture of ecnn
-targets = torch.zeros((past_horizon, batchsize, n_features_Y))
+targets = torch.zeros((past_horizon, batchsize, n_features_Y), device=device)
 
 # %% Train model
 
@@ -92,16 +92,11 @@ for epoch in range(epochs):
         past_error, forecast = torch.split(ecnn_output, past_horizon)
 
         # loss for ecnn -> output should be zero / compare to zero target
-        losses_ecnn = [
-            loss_function(past_error[i], targets[i]) for i in range(past_horizon)
-        ]
+        loss_ecnn = loss_function(past_error, targets)
         # loss for autoencoder -> output should be input
-        losses_autoencoder = [
-            loss_function(autoencoder_output[i], Y_batch[i])
-            for i in range(past_horizon)
-        ]
+        loss_autoencoder = loss_function(autoencoder_output, Y_batch)
         # overall loss
-        loss = sum(losses_ecnn) + sum(losses_autoencoder)
+        loss = loss_ecnn + loss_autoencoder
         loss.backward()
         optimizer.step()
         total_loss[epoch] += loss.detach()
@@ -138,10 +133,12 @@ with torch.no_grad():
     ecnn_model.batchsize = 1
 
     # using autoencoder to compress Y
-    example_pred_compressed_Y = autoencoder.encode(example_pred_Y)
+    example_pred_compressed_Y = autoencoder.encode(example_pred_Y.to(device))
 
     # feeding compressed Y and input U through the ecnn model
-    ecnn_output = ecnn_model(example_pred_U, example_pred_compressed_Y[0:past_horizon])
+    ecnn_output = ecnn_model(
+        example_pred_U.to(device), example_pred_compressed_Y[0:past_horizon]
+    )
     past_predictions_compressed, forecast_compressed = torch.split(
         ecnn_output, past_horizon
     )
@@ -154,11 +151,15 @@ with torch.no_grad():
     # adding Y to model's past prediction and concatenating it with the model's forecast
     forecast_timeseries = (
         torch.cat(
-            (torch.add(past_predictions, example_pred_Y[:past_horizon]), forecast),
+            (
+                torch.add(past_predictions, example_pred_Y[:past_horizon].to(device)),
+                forecast,
+            ),
             dim=0,
         )
         .detach()
         .squeeze()
+        .cpu()
     )
     # print forecast results
     visualize_forecasts.plot_time_series(

@@ -39,7 +39,7 @@ class DeepFeedForward(nn.Module):
         hidden_dim: int,
         output_dim: int,
         deepness: int,
-        activation: Type[torch.autograd.Function] = None,
+        activation: Type[torch.autograd.Function] = torch.tanh,
         dropout_rate: float = 0.0,
     ) -> None:
         """
@@ -81,25 +81,17 @@ class DeepFeedForward(nn.Module):
         self._check_variables()
 
         # Define Layers
-        for level in range(self.deepness):
-            setattr(
-                self,
-                "hidden_layer%d" % level,
-                nn.Linear(self.input_dim, self.hidden_dim),
-            )
+        self.hidden_layer = [nn.Linear(self.input_dim, self.hidden_dim) for _ in range(self.deepness)]
+        self.hidden_layer = nn.ModuleList(self.hidden_layer)
 
-            if level < self.deepness:
-                setattr(
-                    self,
-                    "hidden_layer_connector%d" % level,
-                    nn.Linear(self.hidden_dim, self.hidden_dim),
-                )
+        self.hidden_layer_connector = [nn.Linear(self.hidden_dim, self.hidden_dim) for _ in range(self.deepness - 1)]
+        self.hidden_layer_connector = nn.ModuleList(self.hidden_layer_connector)
 
-            setattr(
-                self,
-                "output_layer%d" % level,
-                nn.Linear(self.hidden_dim, self.output_dim),
-            )
+        self.output_layer = [nn.Linear(self.hidden_dim, self.output_dim) for _ in range(self.deepness)]
+        self.output_layer = nn.ModuleList(self.output_layer)
+
+        if self.dropout_rate > 0:
+            self.dropout = nn.Dropout(self.dropout_rate)
 
     def forward(self, x: torch.Tensor) -> torch.tensor:
         """
@@ -116,44 +108,37 @@ class DeepFeedForward(nn.Module):
             Therefore the first dimension corresponds to the level of deepness in the model.
             The complete output shape is: shape=(deepness, batchsize, output_dim).
         """
-
+        device = self.hidden_layer[0].weight.device
         # Dropout on Input
         if self.dropout_rate > 0:
-            x = nn.Dropout(self.dropout_rate)(x)
+            x = self.dropout(x)
+
         # All Connections to Hidden Layers
-        self.output_hidden_layer = self.deepness * [None]
+        output_hidden_layer = self.deepness * [None]
+
         for level in range(self.deepness):
-            self.horizontal_path = getattr(self, "hidden_layer%d" % level)(x)
+            horizontal_path = self.hidden_layer[level](x)
             if level > 0:
-                self.vertical_path = getattr(
-                    self, "hidden_layer_connector%d" % (level - 1)
-                )(self.output_hidden_layer[level - 1])
-                self.output_hidden_layer[level] = (
-                    self.horizontal_path + self.vertical_path
-                )
+                vertical_path = self.hidden_layer_connector[level - 1](output_hidden_layer[level - 1])
+                output_hidden_layer[level] = (horizontal_path + vertical_path)
             else:
-                self.output_hidden_layer[level] = self.horizontal_path
-            if self.activation is not None:
-                self.output_hidden_layer[level] = self.activation(
-                    self.output_hidden_layer[level]
-                )
+                output_hidden_layer[level] = horizontal_path
+
+            output_hidden_layer[level] = self.activation(output_hidden_layer[level])
 
         # All Connections to Output Layers
-        self.output_output_layer = torch.empty(self.deepness, x.size(0), 1)
+        output_output_layer = torch.empty(((self.deepness,) + x.shape[:-1] + (self.output_dim,)), device=device)
 
         for level in range(self.deepness):
-            self.horizontal_path = getattr(self, "output_layer%d" % level)(
-                self.output_hidden_layer[level]
-            )
-            if level > 0:
-                self.vertical_path = (self.output_output_layer[level - 1]).detach()
-                self.output_output_layer[level] = (
-                    self.horizontal_path + self.vertical_path
-                )
-            else:
-                self.output_output_layer[level] = self.horizontal_path
+            horizontal_path = self.output_layer[level](output_hidden_layer[level])
 
-        return self.output_output_layer
+            if level > 0:
+                vertical_path = (output_output_layer[level - 1]).detach()
+                output_output_layer[level] = (horizontal_path + vertical_path)
+            else:
+                output_output_layer[level] = horizontal_path
+
+        return output_output_layer
 
     def _check_variables(self) -> None:
         """

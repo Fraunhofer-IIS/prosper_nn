@@ -102,7 +102,7 @@ class FRNN(torch.nn.Module):
             num_layers=n_layers,
             batch_first=batch_first,
         )
-        prune_identity = torch.eye(n_features_input)
+        prune_identity = nn.Parameter(torch.eye(n_features_input))
         # Restrict RNN weights so the hidden state and the output resemble the time dependency of
         # the input sequence
         # weights are restricted to a diagonal matrix
@@ -112,7 +112,8 @@ class FRNN(torch.nn.Module):
         # Fuzzy layer
         self.fuzzy = nn.Sequential(
             Fuzzification(
-                n_features_input=self.n_features_input, membership_fcts=self.membership_fcts
+                n_features_input=self.n_features_input,
+                membership_fcts=self.membership_fcts,
             ),
             FuzzyInference(
                 n_features_input=self.n_features_input,
@@ -143,7 +144,7 @@ class FRNN(torch.nn.Module):
         """
         batchsize = inputs.size(0)
         # Initializing hidden_state state for first input using method defined below
-        hidden_state = self.init_hidden(batchsize)
+        hidden_state = self.init_hidden(batchsize, self.rnn.device)
 
         # Passing in the input and hidden_state state into the model and obtaining outputs
         output, hidden_state = self.rnn(inputs, hidden_state)
@@ -153,7 +154,7 @@ class FRNN(torch.nn.Module):
         output = self.fuzzy(output)
         return output
 
-    def init_hidden(self, batchsize: int) -> torch.Tensor:
+    def init_hidden(self, batchsize: int, device='cpu') -> torch.Tensor:
         """
         This method generates the first hidden_state state of zeros which is used in the forward pass.
 
@@ -168,7 +169,7 @@ class FRNN(torch.nn.Module):
             newly initialized hidden_state state
 
         """
-        hidden_state = torch.zeros(
-            self.n_layers, batchsize, self.n_features_input
+        hidden_state = torch.zeros((
+            self.n_layers, batchsize, self.n_features_input), device=device
         ).type(torch.DoubleTensor)
         return hidden_state
