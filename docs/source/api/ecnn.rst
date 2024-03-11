@@ -62,7 +62,7 @@ Error Correction Neural Network ECNN GRU 3 Variant
 Module
 ^^^^^^
 
-.. automodule:: prosper_nn.models.ecnn.ecnn_gru_cell
+.. automodule:: prosper_nn.models.ecnn.gru_cell_variant
     :members:
     :undoc-members:
     :show-inheritance:
@@ -72,21 +72,20 @@ Example
 
 .. code:: python
 
-    ecnn_cell = model.ecnn.ECNN_GRU_3_variant(5, 10)
+    ecnn_cell = model.ecnn.GRU_3_variant(5, 10)
     state = torch.randn(1, 5)
     U = torch.randn(1, 5)
-    Y = torch.randn(1, 1)
-    outputs = []
+    states = []
     for i in range(6):
-        state, output = ecnn_cell(state, U, Y)
-        outputs.append(output)
+        state = ecnn_cell(state, U)
+        states.append(state)
 
 References
 ^^^^^^^^^^
 
-R. Dey and F. M. Salem, "Gate-variants of Gated Recurrent Unit (GRU) neural networks,"
+`R. Dey and F. M. Salem, "Gate-variants of Gated Recurrent Unit (GRU) neural networks,"
 2017 IEEE 60th International Midwest Symposium on Circuits and Systems (MWSCAS),
-Boston, MA, USA, 2017, pp. 1597-1600, doi: 10.1109/MWSCAS.2017.8053243
+Boston, MA, USA, 2017, pp. 1597-1600, doi: 10.1109/MWSCAS.2017.8053243`
 
 `Zimmermann HG., Tietz C., Grothmann R. (2012) Forecasting with Recurrent Neural Networks: 12 Tricks.
 In: Montavon G., Orr G.B., Müller KR. (eds) Neural Networks: Tricks of the Trade.

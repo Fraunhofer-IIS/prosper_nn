@@ -55,7 +55,7 @@ Example
         state, output = hcnn_cell(state, observation)
         outputs.append(output)
 
-.. _Historical Consistent Neural Network LSTM Cell:
+.. _Historical Consistent Neural Network GRU Variant 3 Cell:
 
 Historical Consistent Neural Network GRU Variant 3 Cell
 -------------------------------------------------------
