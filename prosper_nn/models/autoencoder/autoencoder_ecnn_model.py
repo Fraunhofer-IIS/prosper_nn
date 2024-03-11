@@ -23,7 +23,7 @@ Propser_nn is free software: you can redistribute it and/or modify
 """
 
 from .autoencoder import Autoencoder
-from ..ecnn.ecnn_model import ECNN
+from ..ecnn.ecnn import ECNN
 import torch
 from typing import Tuple
 
@@ -33,6 +33,7 @@ class EcnnAutoencoder(torch.nn.Module):
     The module trains an on features encoded with an autoencoder.
     The autoencoder for the encoding can be trained parallel to the ECNN.
     """
+
     def __init__(self, autoencoder: Autoencoder, ecnn: ECNN) -> None:
         """
         Parameters

@@ -14,13 +14,11 @@ n_state_neurons = 4
 batchsize = 1
 
 # Initialise Error Correction Neural Network
-ecnn = ECNN(
-    n_features_U,
-    n_state_neurons,
-    past_horizon,
-    forecast_horizon,
-    n_features_Y=n_features_Y,
-)
+ecnn = ECNN(n_features_U,
+            n_state_neurons,
+            past_horizon,
+            forecast_horizon,
+            n_features_Y=n_features_Y)
 
 # Generate data
 Y, U = gtsd.sample_data(n_data, n_features_Y, n_features_U)

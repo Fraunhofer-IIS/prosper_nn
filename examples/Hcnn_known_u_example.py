@@ -43,7 +43,7 @@ U_batches = U_batches.to(device)
 Y_batches.shape, U_batches.shape
 # %%
 # Initialize HCNN_KNOWN_U
-hcnn_known_u_model = hcnn_known_u.HCNN_KNOWN_U(
+hcnn_known_u = hcnn_known_u.HCNN_KNOWN_U(
     n_state_neurons,
     n_features_U,
     n_features_Y,
@@ -55,7 +55,7 @@ hcnn_known_u_model = hcnn_known_u.HCNN_KNOWN_U(
 ).to(device)
 # %%
 # setting the optimizer, loss and targets
-optimizer = optim.Adam(hcnn_known_u_model.parameters(), lr=0.01)
+optimizer = optim.Adam(hcnn_known_u.parameters(), lr=0.01)
 loss_function = nn.MSELoss()
 targets = torch.zeros((past_horizon, batchsize, n_features_Y), device=device)
 # %%
@@ -64,10 +64,10 @@ epochs = 150
 total_loss = epochs * [0]
 for epoch in range(epochs):
     for batch_index in range(0, U_batches.shape[0]):
-        hcnn_known_u_model.zero_grad()
+        hcnn_known_u.zero_grad()
         U_batch = U_batches[batch_index]
         Y_batch = Y_batches[batch_index]
-        model_out = hcnn_known_u_model(U_batch, Y_batch)
+        model_out = hcnn_known_u(U_batch, Y_batch)
         past_error, forecast = torch.split(model_out, past_horizon)
         loss = loss_function(past_error, targets)
         loss.backward()
@@ -95,9 +95,9 @@ example_pred_Y = (
 )
 # Predict with trained model
 with torch.no_grad():
-    hcnn_known_u_model.eval()
+    hcnn_known_u.eval()
 
-    model_output = hcnn_known_u_model(example_pred_U, example_pred_Y[0:past_horizon])
+    model_output = hcnn_known_u(example_pred_U, example_pred_Y[0:past_horizon])
     past_errors, forecast = torch.split(model_output, past_horizon)
     print("Forecast: {}".format(forecast))
     expected_timeseries = (
@@ -119,8 +119,8 @@ with torch.no_grad():
     for batch_index in range(0, U_batches.shape[0]):
         U_batch = U_batches[batch_index]
         Y_batch = Y_batches[batch_index]
-        hcnn_known_u_model(U_batch, Y_batch)
-        states_for_correlation[batch_index] = hcnn_known_u_model.state[
+        hcnn_known_u(U_batch, Y_batch)
+        states_for_correlation[batch_index] = hcnn_known_u.state[
             past_horizon
         ].cpu()
     states_for_correlation = states_for_correlation.reshape((-1, n_state_neurons))

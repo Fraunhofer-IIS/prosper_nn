@@ -57,13 +57,13 @@ Example
 
 .. _Historical Consistent Neural Network LSTM Cell:
 
-Historical Consistent Neural Network LSTM Cell
-----------------------------------------------
+Historical Consistent Neural Network GRU Variant 3 Cell
+-------------------------------------------------------
 
 Module
 ^^^^^^
 
-.. automodule:: prosper_nn.models.hcnn.hcnn_lstm_cell
+.. automodule:: prosper_nn.models.hcnn.hcnn_gru_cell
     :members:
     :undoc-members:
     :show-inheritance:
@@ -73,7 +73,7 @@ Example
 
 .. code:: python
 
-    hcnn_cell = model.hcnn.HCNN_LSTM_Cell(10, 20)
+    hcnn_cell = model.hcnn.HCNN_GRU_3_variant(10, 20)
     observation = torch.randn(1, 1)
     state = torch.randn(1, 5)
     outputs = []

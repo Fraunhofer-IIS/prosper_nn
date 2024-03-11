@@ -168,7 +168,10 @@ def _find_max_correlation(
     print_most_corr = "The most correlated neurons are the ones with indices "
     if ind_neurons_neg.nelement() == 0:
         if print_values:
-            print(print_most_corr, ind_neurons.squeeze().tolist(),)
+            print(
+                print_most_corr,
+                ind_neurons.squeeze().tolist(),
+            )
             print("The according Pearson correlation coefficient is", abs_max_corr)
         return (abs_max_corr, ind_neurons)
     elif ind_neurons_pos.nelement() == 0:

@@ -4,7 +4,7 @@ Error Correction Neural Network
 Module
 ^^^^^^
 
-.. automodule:: prosper_nn.models.ecnn.ecnn_model
+.. automodule:: prosper_nn.models.ecnn.ecnn
     :members:
     :undoc-members:
     :show-inheritance:
@@ -56,13 +56,13 @@ In: Montavon G., Orr G.B., Müller KR. (eds) Neural Networks: Tricks of the Trad
 Lecture Notes in Computer Science, vol 7700. Springer, Berlin, Heidelberg.
 https://doi.org/10.1007/978-3-642-35289-8_37 <https://link.springer.com/chapter/10.1007/978-3-642-35289-8_37>`_
 
-Error Correction Neural Network LSTM Cell
------------------------------------------
+Error Correction Neural Network ECNN GRU 3 Variant
+--------------------------------------------------
 
 Module
 ^^^^^^
 
-.. automodule:: prosper_nn.models.ecnn.ecnn_lstm_cell
+.. automodule:: prosper_nn.models.ecnn.ecnn_gru_cell
     :members:
     :undoc-members:
     :show-inheritance:
@@ -72,7 +72,7 @@ Example
 
 .. code:: python
 
-    ecnn_cell = model.ecnn.ECNN_LSTM_Cell(5, 10)
+    ecnn_cell = model.ecnn.ECNN_GRU_3_variant(5, 10)
     state = torch.randn(1, 5)
     U = torch.randn(1, 5)
     Y = torch.randn(1, 1)
@@ -81,8 +81,12 @@ Example
         state, output = ecnn_cell(state, U, Y)
         outputs.append(output)
 
-Reference
-^^^^^^^^^
+References
+^^^^^^^^^^
+
+R. Dey and F. M. Salem, "Gate-variants of Gated Recurrent Unit (GRU) neural networks,"
+2017 IEEE 60th International Midwest Symposium on Circuits and Systems (MWSCAS),
+Boston, MA, USA, 2017, pp. 1597-1600, doi: 10.1109/MWSCAS.2017.8053243
 
 `Zimmermann HG., Tietz C., Grothmann R. (2012) Forecasting with Recurrent Neural Networks: 12 Tricks.
 In: Montavon G., Orr G.B., Müller KR. (eds) Neural Networks: Tricks of the Trade.
