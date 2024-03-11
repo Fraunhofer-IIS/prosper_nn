@@ -11,12 +11,6 @@ class HCNN_compressed(nn.Module):
     the forecast of the task variables (support).
     It is possible to compress the support variables before they are compared with the expectation
     in the model. In that way, the number of features in the target layers get decreased.
-
-    A Historical Consistent Neural Network belongs to the class of Recurrent Neural Networks.
-    A special feature of the architecture is that it has no input in the common sense.
-    Instead, all the inputs are also interpreted as targets that are equally important.
-    So the architecture does not distinguish between input and output features.
-    Furthermore, it uses teacher forcing to improve the hidden state.
     """
 
     def __init__(
@@ -38,16 +32,16 @@ class HCNN_compressed(nn.Module):
         Parameters
         ----------
         n_state_neurons : int
-            The dimension of the state in the HCNN Cell. It must be an positive integer.
+            The dimension of the state in the HCNN Cell. It must be a positive integer.
         n_features_task : int
             The size of the task variables to predict in each timestamp.
-            It must be an positive integer.
-        n_features_support: int
+            It must be a positive integer.
+        n_features_sup: int
             The size of the support variables which are input in each timestamp.
-            It must be an positive integer.
-        n_features_support_compressed: int
+            It must be a positive integer.
+        n_features_sup_comp: int
             The size to which we are compressing our support variables in each timestamp.
-            It must be an positive integer.
+            It must be a positive integer.
         past_horizon : int
             The past horizon gives the amount of time steps into the past,
             where an observation is available.
@@ -120,7 +114,6 @@ class HCNN_compressed(nn.Module):
             task should be 3-dimensional with the shape = (past_horizon, batchsize, n_features_task).
             This timeseries of observations contains the features we want to predict in future.
             Used for training the model.
-
         support : torch.Tensor
             support should be 3-dimensional with the shape = (past_horizon, batchsize, n_features_sup).
             This timeseries of observations contains the features that inffluence the task that want to

@@ -26,16 +26,16 @@ class HCNNCell_compressed(nn.Module):
         Parameters
         ----------
         n_state_neurons : int
-            The dimension of the state in the HCNN Cell. It must be an positive integer.
+            The dimension of the state in the HCNN Cell. It must be a positive integer.
         n_features_task : int
             The size of the task variables to predict in each timestamp.
-            It must be an positive integer.
+            It must be a positive integer.
         n_festures_support: int
             The size of the support variables which are input in each timestamp.
-            It must be an positive integer.
+            It must be a positive integer.
         n_features_compressed_support: int
             The size to which we are compressing our support variables in each timestamp.
-            It must be an positive integer.
+            It must be a positive integer.
         sparsity : float
             The share of weights that are set to zero in the matrix A.
             These weights are not trainable and therefore always zero.
@@ -119,7 +119,6 @@ class HCNNCell_compressed(nn.Module):
             the observation is not subtracted
             from the expectation to create the output variable.
             Additionally, no teacher forcing is applied on the state vector.
-
         support : torch.Tensor
             The support is the data for the given timestamp which is compressed and then used to learn task.
             It has the
@@ -135,7 +134,7 @@ class HCNNCell_compressed(nn.Module):
         state : torch.Tensor
             The updated state of the HCNN.
         output_task: torch.Tensor
-            The output of the HCNN Cell. If an task is given,
+            The output of the HCNN Cell. If a task is given,
             this output is calculated by the expectation_task minus the task.
             If no task is given, the output is equal to the expectation.
         """
@@ -193,7 +192,7 @@ class HCNNCell_compressed(nn.Module):
 
     def set_task_and_support_error(self, task, support) -> None:
         """
-        The task and support tesnors should either both be set or both be not set.
+        The task and support tensors should either both be set or both be not set.
         This is used to check and throw the error if either of them is empty and reminds to set that.
 
 

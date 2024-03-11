@@ -18,19 +18,19 @@ batchsize = 1
 n_batches = 2
 n_state_neurons = 10
 n_features_task = 2
-n_features_support = 5
-n_features_cSupport = 3
+n_features_sup = 5
+n_features_sup_comp = 3
 past_horizon = 10
 forecast_horizon = 5
 
 
 # %% Create data and targets
 target_task = torch.zeros((past_horizon, batchsize, n_features_task))
-target_cSupport = torch.zeros((past_horizon, batchsize, n_features_cSupport))
+target_support = torch.zeros((past_horizon, batchsize, n_features_sup_comp))
 
 # generate data with "unknown" variables U
 support, task = gtsd.sample_data(
-    n_data, n_features_Y=n_features_support, n_features_U=n_features_task
+    n_data, n_features_Y=n_features_sup, n_features_U=n_features_task
 )
 
 # Only use Y as input for the hcnn
@@ -41,8 +41,8 @@ batches_support = ci.create_input(support, past_horizon, batchsize)
 hcnn_model_compressed = HCNN_compressed(
     n_state_neurons,
     n_features_task,
-    n_features_support,
-    n_features_cSupport,
+    n_features_sup,
+    n_features_sup_comp,
     past_horizon,
     forecast_horizon,
 )
@@ -67,10 +67,10 @@ for epoch in range(epochs):
         past_error_task, forecast_task = torch.split(output_task, past_horizon)
         past_error_support = output_support[:past_horizon]
 
-        losses_task = loss_function(past_error_task, target_task)
-        losses_support = loss_function(past_error_support, target_cSupport)
+        loss_task = loss_function(past_error_task, target_task)
+        loss_support = loss_function(past_error_support, target_support)
 
-        loss = losses_task + losses_support
+        loss = loss_task + loss_support
         loss.backward()
         optimizer.step()
         total_loss[epoch] += loss.detach()
