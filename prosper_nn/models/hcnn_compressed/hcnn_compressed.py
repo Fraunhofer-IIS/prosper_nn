@@ -116,7 +116,7 @@ class HCNN_compressed(nn.Module):
             Used for training the model.
         support : torch.Tensor
             support should be 3-dimensional with the shape = (past_horizon, batchsize, n_features_sup).
-            This timeseries of observations contains the features that inffluence the task that want to
+            This timeseries of observations contains the features that influence the task we want to predict.
             predict in future.
             Used for training the model.
 
