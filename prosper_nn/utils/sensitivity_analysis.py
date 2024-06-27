@@ -1,4 +1,3 @@
-""""""
 """
 Prosper_nn provides implementations for specialized time series forecasting
 neural networks and related utility functions.
@@ -26,6 +25,7 @@ import torch
 import matplotlib.pyplot as plt
 from . import visualization
 from typing import Optional, List, Tuple, Union
+import seaborn as sns
 
 
 def calculate_sensitivity_analysis(
@@ -33,7 +33,7 @@ def calculate_sensitivity_analysis(
     *data: Tuple[torch.Tensor, ...],
     output_neuron: tuple = (0,),
     batchsize: int = 1,
-) -> torch.tensor:
+) -> torch.Tensor:
     """
     Calculates the sensitivity matrix.
     The function differentiates the target node with respect to the
@@ -79,6 +79,9 @@ def calculate_sensitivity_analysis(
         y_pred = model(*inputs)
         # get output for output neuron
         try:
+            while isinstance(y_pred, tuple):
+                y_pred = y_pred[output_neuron[0]]
+                output_neuron = output_neuron[1:]
             y_pred = y_pred[output_neuron]
         except AttributeError:
             raise AttributeError("Output neuron could not be found in model output.")
@@ -89,9 +92,8 @@ def calculate_sensitivity_analysis(
             # get grad
             for input_batch in inputs:
                 sensitivity_intern_batch = torch.empty((0,))
-                for j, y in enumerate(
-                    y_pred
-                ):  # calculate sensitivity for every element of the batch
+                # calculate sensitivity for every element of the batch
+                for j, y in enumerate(y_pred):
                     y.backward(retain_graph=True)
                     grad = input_batch.grad[j]
                     grad = grad.unsqueeze(0)
@@ -103,22 +105,21 @@ def calculate_sensitivity_analysis(
                 )
         else:
             # get grad
-            y_pred.backward(retain_graph=True)
+            y_pred.backward(retain_graph=False)
             for input_batch in inputs:
                 grad = input_batch.grad
                 sensitivity_intern = torch.cat([sensitivity_intern, grad], dim=-1)
             sensitivity_intern = sensitivity_intern.unsqueeze(0)
         sensitivity = torch.cat([sensitivity, sensitivity_intern], dim=0)
-    sensitivity = sensitivity.reshape((sensitivity.shape[0], -1))
 
     return sensitivity
 
 
 def plot_sensitivity_curve(
-    sensitivity: torch.tensor,
+    sensitivity: torch.Tensor,
     output_neuron: int = 1,
     xlabel: str = "Observations",
-    ylabel: str = "d output / d input",
+    ylabel: str = "$\\frac{\\partial output}{\\partial input}",
     title: str = "Sensitivity analysis of one output node",
 ) -> None:
     """
@@ -163,17 +164,20 @@ def plot_sensitivity_curve(
     plt.show()
 
 
+# %% Sensitivity for HCNN and other recurrent models
 def analyse_temporal_sensitivity(
     model: torch.nn.Module,
     data: Union[torch.Tensor, Tuple[torch.Tensor, ...]],
-    n_task_nodes: int,
+    task_nodes: List[int],
     n_future_steps: int,
     past_horizon: int,
     n_features: int,
     features: Optional[List[str]] = None,
-    xlabel: Optional[str] = "Features",
-    ylabel: Optional[str] = "Time",
+    xlabel: Optional[str] = "Forecast Step",
+    ylabel: Optional[str] = "Features",
     title: Optional[str] = None,
+    top_k: int = 1,
+    save_at: Optional[str] = None,
 ) -> None:
     """
     Function to analyze the influence of the present on the future variables in HCNNs and other
@@ -193,9 +197,8 @@ def analyse_temporal_sensitivity(
         Each input tensor for the model is assumed to be of the
         shape=(n_batches, past_horizon, batchsize, n_features).
         If your model needs input of a different shape, you might have to adapt the code.
-    n_task_nodes : int
-        The amount of (target) variables for which the temporal analysis should be done.
-        The first n_task_nodes features are taken.
+    task_nodes : List[int]
+        The indexes of (target) variables for which the temporal analysis should be done.
     n_future_steps : int
         The number of forecasting steps that are investigated by the analysis.
     past_horizon : int
@@ -210,59 +213,49 @@ def analyse_temporal_sensitivity(
         Set the label for the y-axis.
     title : list[str], optional
         Set a title for the plot.
+    top_k : int
+        The number of features with the highest absolute/monotonie that are highlighted.
 
     Returns
     -------
     None
     """
-
     if features is None:
         features = [f"feature_{i}" for i in range(n_features)]
     if type(data) is torch.Tensor:
         data = (data,)
-    # Calculations
-    heat = torch.empty((n_task_nodes, n_future_steps, n_features))
-    for node in range(0, n_task_nodes):
-        for i, time in enumerate(
-            range(past_horizon + 1, past_horizon + 1 + n_future_steps)
-        ):
-            sensi = calculate_sensitivity_analysis(
-                model, *data, output_neuron=(-1, time, 0, node), batchsize=1
-            )
-            heat[node][i] = sensi[0, (past_horizon - 1) * n_features :]
 
-    # Visualization
-    if features is None:
-        features = [str(i) for i in range(n_features)]
-    if title is None:
-        title = [
-            "Influence of present features on future output node {}.".format(
-                features[node]
+    # Calculations
+    total_heat = []
+    for node in task_nodes:
+        heat = []
+        for time in range(past_horizon, past_horizon + n_future_steps):
+            output_neuron = (-1, time, 0, node)
+
+            sensi = calculate_sensitivity_analysis(
+                model, *data, output_neuron=output_neuron, batchsize=1
             )
-            for node in range(n_task_nodes)
-        ]
-    yticks = {
-        "ticks": range(1, n_future_steps + 1),
-        "labels": ["+" + str(i) for i in range(1, n_future_steps + 1)],
-        "rotation": 90,
-    }
-    xticks = {
-        "ticks": range(n_features),
-        "labels": features,
-        "horizontalalignment": "left",
-    }
-    # plot a sensitivity matrix for every feature/target variable to be investigated
-    for node in range(0, n_task_nodes):
-        visualization.plot_heatmap(
-            heat[node],
-            center=0,
+            sensi = sensi.reshape((sensi.shape[0], -1))
+            heat.append(sensi[0, (past_horizon - 1) * n_features :])
+        heat = torch.stack(heat)
+
+        plot_analyse_temporal_sensitivity(
+            heat.T,
+            features[node],
+            features,
+            n_future_steps,
+            path=save_at,
+            title=title,
             xlabel=xlabel,
             ylabel=ylabel,
-            title=title[node],
-            xticks=xticks,
-            yticks=yticks,
+            top_k=top_k,
         )
-    return
+    total_heat.append(heat)
+
+    return torch.stack(total_heat)
+
+
+# %% Sensitivity for feed-forward models and other not-recurrent models
 
 
 def sensitivity_analysis(
@@ -274,6 +267,7 @@ def sensitivity_analysis(
     ylabel: str = "Input Node",
     title: str = "Sensitivity-analysis heatmap for one output neuron",
     cbar_kws: dict = {"label": "d output / d input"},
+    save_at: Optional[str] = None,
 ) -> torch.Tensor:
     """
     Sensitivity for feed-forward models and other not-recurrent models.
@@ -314,6 +308,8 @@ def sensitivity_analysis(
         Set a title for the axes.
     cbar_kws : dict
         Keyword arguments for matplotlib.figure.Figure.colorbar().
+    save_at : str
+        Where to save the figure
 
     Returns
     -------
@@ -329,6 +325,7 @@ def sensitivity_analysis(
     sensitivity = calculate_sensitivity_analysis(
         model, *data, output_neuron=output_neuron, batchsize=batchsize
     )
+    sensitivity = sensitivity.reshape((sensitivity.shape[0], -1))
     visualization.plot_heatmap(
         sensitivity.T,
         center=0,
@@ -338,5 +335,7 @@ def sensitivity_analysis(
         ylabel=ylabel,
         title=title,
         cbar_kws=cbar_kws,
+        save_at=save_at,
+        grid={"visible": False},
     )
     return sensitivity
