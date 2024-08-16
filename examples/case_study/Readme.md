@@ -10,8 +10,8 @@ Additionally install *tqdm*: ``pip install tqdm``
 
 
 ## Data
-Download monthly data *2024-01.csv* from
-https://files.stlouisfed.org/files/htdocs/fred-md/monthly/2024-01.csv
+Download monthly data *2024-07.csv* from
+https://files.stlouisfed.org/files/htdocs/fred-md/monthly/2024-07.csv
 and place it in the current directory.
 
 ## Files
