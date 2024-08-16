@@ -27,9 +27,6 @@ from typing import Optional, Type, TypeVar
 from ..hcnn.hcnn_cell import HCNNCell
 
 
-T = TypeVar("T", bound="Module")
-
-
 class CRCNN(nn.Module):
     """
     The CRCNN class creates a Causal Retro-Causal Neural Network.
