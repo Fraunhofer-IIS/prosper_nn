@@ -61,7 +61,7 @@ def test_analyse_temporal_sensitivity():
         task_nodes=task_nodes,
         n_future_steps=forecast_horizon,
         past_horizon=past_horizon,
-        n_features=input_size,
+        n_features=n_features_Y,
     )
     assert isinstance(sensi, torch.Tensor)
     assert sensi.shape == torch.Size((len(task_nodes), forecast_horizon, n_features_Y))
