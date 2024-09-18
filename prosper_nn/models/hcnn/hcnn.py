@@ -1,4 +1,3 @@
-""""""
 """
 Prosper_nn provides implementations for specialized time series forecasting
 neural networks and related utility functions.
@@ -24,8 +23,10 @@ Propser_nn is free software: you can redistribute it and/or modify
 
 import torch.nn as nn
 import torch
-from typing import Optional, Type
+from typing import Optional, Type, Literal
 from . import hcnn_cell, hcnn_gru_cell
+
+allowed_update_frequencies = Literal["forward", "time_step"]
 
 
 class HCNN(nn.Module):
@@ -92,8 +93,7 @@ class HCNN(nn.Module):
         teacher_forcing: float
             The probability that teacher forcing is applied for a single state neuron.
             In each time step this is repeated and therefore enforces stochastic learning
-            if the value is smaller than 1. Since not all nodes are corrected then, it is
-            partial teacher forcing (ptf).
+            if the value is smaller than 1.
         decrease_teacher_forcing: float
             The amount by which teacher_forcing is decreased each epoch.
 
@@ -131,13 +131,13 @@ class HCNN(nn.Module):
             raise ValueError("Cell type is not found")
 
         self.HCNNCell = self.HCNNCell(
-            self.n_state_neurons,
-            self.n_features_Y,
-            self.sparsity,
-            self.activation,
-            self.teacher_forcing,
-            self.backward_full_Y,
-            self.ptf_in_backward,
+            n_state_neurons=self.n_state_neurons,
+            n_features_Y=self.n_features_Y,
+            sparsity=self.sparsity,
+            activation=self.activation,
+            teacher_forcing=self.teacher_forcing,
+            backward_full_Y=self.backward_full_Y,
+            ptf_in_backward=self.ptf_in_backward,
         )
 
     def forward(self, Y: torch.Tensor):
@@ -158,29 +158,50 @@ class HCNN(nn.Module):
             shape=(past_horizon+forecast_horizon, batchsize, n_features_Y)
         """
         device = self.init_state.device
-        self.state[0] = self.init_state
+        dtype = self.init_state.dtype
         self._check_sizes(Y)
+
         batchsize = Y.shape[1]
 
-        # reset saved cell outputs
-        past_error = torch.zeros((self.past_horizon, batchsize, self.n_features_Y), device=device)
-        forecast = torch.zeros((self.forecast_horizon, batchsize, self.n_features_Y), device=device)
+        # reset
+        self.state[0] = self.init_state
+        past_error, forecast = self.reset_cell_outputs(batchsize, device, dtype)
 
         # past
         for t in range(self.past_horizon):
             if t == 0:
                 self.state[t + 1], past_error[t] = self.HCNNCell(
-                    self.state[t].repeat(batchsize, 1), Y[t]
+                    self.state[t].repeat(batchsize, 1),
+                    Y[t],
                 )
             else:
                 self.state[t + 1], past_error[t] = self.HCNNCell(self.state[t], Y[t])
+
         # future
-        for t in range(self.past_horizon, self.past_horizon + self.forecast_horizon):
-            self.state[t + 1], forecast[t - self.past_horizon] = self.HCNNCell(
-                self.state[t]
-            )
+        if self.calculate_forecast:
+            for t in range(
+                self.past_horizon, self.past_horizon + self.forecast_horizon
+            ):
+                self.state[t + 1], forecast[t - self.past_horizon] = self.HCNNCell(
+                    self.state[t]
+                )
 
         return torch.cat([past_error, forecast], dim=0)
+
+    def enable_calculate_forecast(self):
+        self.calculate_forecast = True
+
+    def disable_calculate_forecast(self):
+        self.calculate_forecast = False
+
+    def reset_cell_outputs(self, batchsize, device, dtype):
+        past_error = torch.zeros(
+            (self.past_horizon, batchsize, self.n_features_Y), device=device, dtype=dtype
+        )
+        forecast = torch.zeros(
+            (self.forecast_horizon, batchsize, self.n_features_Y), device=device, dtype=dtype
+        )
+        return past_error, forecast
 
     def adjust_teacher_forcing(self):
         """

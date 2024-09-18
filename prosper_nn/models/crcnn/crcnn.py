@@ -1,4 +1,3 @@
-""""""
 """
 Prosper_nn provides implementations for specialized time series forecasting
 neural networks and related utility functions.
@@ -24,7 +23,7 @@ Propser_nn is free software: you can redistribute it and/or modify
 
 import torch.nn as nn
 import torch
-from typing import Optional, Type
+from typing import Optional, Type, TypeVar
 from ..hcnn.hcnn_cell import HCNNCell
 
 
@@ -43,8 +42,8 @@ class CRCNN(nn.Module):
         n_features_Y: int,
         past_horizon: int,
         forecast_horizon: int,
-        n_branches: int,
-        batchsize: int,
+        n_branches: int = 3,
+        batchsize: Optional[int] = None,
         sparsity: float = 0.0,
         activation: Type[torch.autograd.Function] = torch.tanh,
         init_state_causal: Optional[torch.Tensor] = None,
@@ -152,10 +151,11 @@ class CRCNN(nn.Module):
             self.teacher_forcing,
         )
 
-        self.future_bias = nn.Parameter(
-            torch.zeros((self.forecast_horizon, self.batchsize, self.n_features_Y)),
-            requires_grad=True,
-        )
+        if self.mirroring:
+            self.future_bias = nn.Parameter(
+                torch.zeros((self.forecast_horizon, self.batchsize, self.n_features_Y)),
+                requires_grad=True,
+            )
 
     def forward(self, Y: torch.Tensor) -> torch.Tensor:
         """
@@ -174,33 +174,41 @@ class CRCNN(nn.Module):
 
         self._check_sizes(Y)
 
-        device = self.CRCNNCell_causal.A.weight.device
+        device = self.init_state_causal.device
+        dtype = self.init_state_causal.dtype
+        batchsize = Y.size(1)
 
         if self.mirroring:
             future_bias = self.future_bias
+            assert batchsize == self.batchsize, f"batchsize {batchsize} does not match initialized batchsize {self.batchsize} for mirroring"
         else:
             future_bias = [None] * self.forecast_horizon
 
+
         # reset saved cell outputs
         past_error = torch.zeros(
-            (self.n_branches - 1, self.past_horizon, self.batchsize, self.n_features_Y), device=device
+            (self.n_branches - 1, self.past_horizon, batchsize, self.n_features_Y),
+            device=device, dtype=dtype,
         )
         forecast = torch.zeros(
-            (self.n_branches - 1,
-            self.forecast_horizon,
-            self.batchsize,
-            self.n_features_Y,),
-            device=device
+            (
+                self.n_branches - 1,
+                self.forecast_horizon,
+                batchsize,
+                self.n_features_Y,
+            ),
+            device=device,
+            dtype=dtype
         )
 
         # initialize causal and retro-causal branches
         for i in range(self.n_causal_branches):
             self.state_causal[i][0], _ = self.CRCNNCell_causal(
-                self.init_state_causal.repeat(self.batchsize, 1)
+                self.init_state_causal.repeat(batchsize, 1)
             )
         for i in range(self.n_causal_branches - 1):
             self.state_retro_causal[i][-1], _ = self.CRCNNCell_retro_causal(
-                self.init_state_retro_causal.repeat(self.batchsize, 1)
+                self.init_state_retro_causal.repeat(batchsize, 1)
             )
 
         # First (causal) branch (no teacher-forcing)
@@ -285,15 +293,13 @@ class CRCNN(nn.Module):
         None
         """
 
-        if len(Y.shape) != 3:
+        if Y.dim() != 3:
             raise ValueError(
                 "The shape for a batch of observations should be "
                 "shape = (past_horizon, batchsize, n_features_Y)"
             )
 
-        if Y.size() != torch.Size(
-            (self.past_horizon, self.batchsize, self.n_features_Y)
-        ):
+        if (Y.size(0) != self.past_horizon) | (Y.size(2) != self.n_features_Y):
             raise ValueError(
                 "Y must be of the dimensions"
                 " shape = (past_horizon, batchsize, n_features_Y)."
@@ -304,7 +310,7 @@ class CRCNN(nn.Module):
     def _check_variables(self) -> None:
         """
         Checks if self.n_state_neurons, self.n_features_Y, self.past_horizon,
-        self.forecast_horizon, self.batchsize, self.sparsity have valid inputs.
+        self.forecast_horizon, self.sparsity have valid inputs.
         Parameters
         ----------
         None
@@ -346,11 +352,14 @@ class CRCNN(nn.Module):
                 "{} is not a valid number for n_branches. "
                 "It must be an integer equal or greater than 3.".format(self.n_branches)
             )
-        if (self.batchsize < 1) or (type(self.batchsize) != int):
-            raise ValueError(
-                "{} is not a valid number for batchsize. "
-                "It must be an integer greater than 0.".format(self.batchsize)
-            )
+        if self.batchsize != None:
+            if (self.batchsize < 1) or (type(self.batchsize) != int):
+                raise ValueError(
+                    "{} is not a valid number for batchsize. "
+                    "It must be an integer greater than 0.".format(self.batchsize)
+                )
+        if (self.batchsize == None) and self.mirroring:
+            raise ValueError('Parameter batchsize has to be set if mirroring is True.')
         if (self.sparsity < 0) or (self.sparsity > 1):
             raise ValueError(
                 "{} is not a valid number for sparsity. "

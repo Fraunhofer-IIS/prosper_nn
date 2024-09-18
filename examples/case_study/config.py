@@ -1,5 +1,6 @@
 import pandas as pd
 
+area = "output_and_income"  # "consumption_and_orders", "prices", "output_and_income"
 n_evaluate_targets = 19
 
 past_horizon = 24

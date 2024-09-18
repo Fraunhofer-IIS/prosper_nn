@@ -18,38 +18,77 @@ class Dataset_Fredmd(torch.utils.data.Dataset):
         forecast_horizon: int,
         split_date: pd.Period,
         data_type: str = "test",
-        target: str = "CPIAUCSL",
+        area: str = "prices",
     ):
         assert data_type in ["train", "val", "test"]
         self.past_horizon = past_horizon
         self.forecast_horizon = forecast_horizon
         self.window_size = past_horizon + forecast_horizon
         self.split_date = split_date
+        self.area = area
 
-        # Select variables from "prices" group without 'OILPRICEx'
-        self.features = [
-            "WPSFD49207",
-            "WPSFD49502",
-            "WPSID61",
-            "WPSID62",
-            # "OILPRICEx",
-            "PPICMM",
-            "CPIAUCSL",
-            "CPIAPPSL",
-            "CPITRNSL",
-            "CPIMEDSL",
-            "CUSR0000SAC",
-            "CUSR0000SAD",
-            "CUSR0000SAS",
-            "CPIULFSL",
-            "CUSR0000SA0L2",
-            "CUSR0000SA0L5",
-            "PCEPI",
-            "DDURRG3M086SBEA",
-            "DNDGRG3M086SBEA",
-            "DSERRG3M086SBEA",
-        ]
-        self.target = target
+        if area == "prices":
+            # Select variables from "prices" group without 'OILPRICEx'
+            self.features = [
+                "WPSFD49207",
+                "WPSFD49502",
+                "WPSID61",
+                "WPSID62",
+                # "OILPRICEx",
+                "PPICMM",
+                "CPIAUCSL",
+                "CPIAPPSL",
+                "CPITRNSL",
+                "CPIMEDSL",
+                "CUSR0000SAC",
+                "CUSR0000SAD",
+                "CUSR0000SAS",
+                "CPIULFSL",
+                "CUSR0000SA0L2",
+                "CUSR0000SA0L5",
+                "PCEPI",
+                "DDURRG3M086SBEA",
+                "DNDGRG3M086SBEA",
+                "DSERRG3M086SBEA",
+            ]
+            self.target = "CPIAUCSL"
+        elif area == "output_and_income":
+            self.features = [
+                "RPI",
+                "W875RX1",
+                "INDPRO",
+                "IPFPNSS",
+                "IPFINAL",
+                "IPCONGD",
+                "IPDCONGD",
+                "IPNCONGD",
+                "IPBUSEQ",
+                "IPMAT",
+                "IPDMAT",
+                "IPNMAT",
+                "IPMANSICS",
+                "IPB51222S",
+                "IPFUELS",
+                "CUMFNS",
+            ]
+            self.target = "RPI"
+        elif area == "consumption_and_orders":
+            self.features = [
+                "HOUST",
+                "HOUSTNE",
+                "HOUSTMW",
+                "HOUSTS",
+                "HOUSTW",
+                "PERMIT",
+                "PERMITNE",
+                "PERMITMW",
+                "PERMITS",
+                "PERMITW",
+            ]
+            self.target = "HOUST"
+        else:
+            raise ValueError(f"area {area} unknown")
+        self.target_future_format = [self.target]
         self.original_data = self.get_data()
         self.n_rolling_origins = len(self.original_data) - self.window_size
 
@@ -123,9 +162,15 @@ class Dataset_Fredmd(torch.utils.data.Dataset):
         assert future.notnull().all().all()
 
         features_past = torch.tensor(past[self.features].values)
-        target_past = torch.tensor(past[self.target].values).unsqueeze(1)
-        target_future = torch.tensor(future[self.target].values).unsqueeze(1)
+        target_past = torch.tensor(past[[self.target]].values)
+        target_future = torch.tensor(future[self.target_future_format].values)
         return features_past, target_past, target_future
+
+    def set_target_future_format(self, multivariate=False):
+        if multivariate:
+            self.target_future_format = self.features
+        else:
+            self.target_future_format = [self.target]
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         rolling_origin_start_date = self.df.index.get_level_values(0).unique()[idx]
@@ -137,13 +182,17 @@ class Dataset_Fredmd(torch.utils.data.Dataset):
     def get_data(self) -> pd.DataFrame:
         path = Path(__file__).parent
         df = pd.read_csv(
-            path / "2024-01.csv",
+            path / "2024-07.csv",
             parse_dates=["sasdate"],
             index_col="sasdate",
             usecols=["sasdate", self.target] + self.features,
         )
         df = df.drop("Transform:")
         df.index = pd.PeriodIndex(df.index, freq="M")
+
+        # Some variables are only available after 1959
+        if self.area == "consumption_and_orders":
+            df = df.iloc[12:]
         return df
 
     def get_rolling_origins(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -200,3 +249,34 @@ class Dataset_Fredmd(torch.utils.data.Dataset):
         all_targets_future = torch.stack(all_targets_future, dim=1)
         all_features_past = torch.stack(all_features_past, dim=1)
         return all_features_past, all_targets_past, all_targets_future
+
+
+def init_datasets(
+    past_horizon: int,
+    forecast_horizon: int,
+    train_test_split_period: pd.Period,
+    area: str,
+) -> Tuple[torch.utils.data.Dataset]:
+    fredmd_train = Dataset_Fredmd(
+        past_horizon,
+        forecast_horizon,
+        split_date=train_test_split_period,
+        data_type="train",
+        area=area,
+    )
+    fredmd_val = Dataset_Fredmd(
+        past_horizon,
+        forecast_horizon,
+        split_date=train_test_split_period,
+        data_type="val",
+        area=area,
+    )
+    fredmd_test = Dataset_Fredmd(
+        past_horizon,
+        forecast_horizon,
+        split_date=train_test_split_period,
+        data_type="test",
+        area=area,
+    )
+
+    return fredmd_train, fredmd_val, fredmd_test

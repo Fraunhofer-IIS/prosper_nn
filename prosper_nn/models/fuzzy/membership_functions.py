@@ -1,4 +1,3 @@
-""""""
 """
 Prosper_nn provides implementations for specialized time series forecasting
 neural networks and related utility functions.
@@ -98,7 +97,7 @@ class GaussianMembership(torch.nn.Module):
     * deviation of the curve as learnable parameter sigma
     """
 
-    def __init__(self, sigma_initializer: Callable = torch.nn.init.constant_) -> None:
+    def __init__(self, sigma: float = 1.) -> None:
         """
 
         Parameters
@@ -106,8 +105,7 @@ class GaussianMembership(torch.nn.Module):
         sigma_initializer : torch.nn.Initializer
         """
         super(GaussianMembership, self).__init__()
-        self.sigma = torch.nn.Parameter(torch.Tensor(1))
-        sigma_initializer(self.sigma, 1)
+        self.sigma = torch.nn.Parameter(torch.tensor([sigma]))
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """

@@ -1,4 +1,3 @@
-""""""
 """
 Prosper_nn provides implementations for specialized time series forecasting
 neural networks and related utility functions.
@@ -23,10 +22,10 @@ Propser_nn is free software: you can redistribute it and/or modify
 """
 
 import warnings
-import torch
 from copy import deepcopy
 from typing import Callable, Tuple, Union
 import operator
+import torch
 import torch.nn.utils.prune as prune
 
 
@@ -55,11 +54,18 @@ def init_model(model: torch.nn.Module, init_func: Callable, *params, **kwargs) -
             try:
                 init_func(p, *params, **kwargs)
             except ValueError:
-                warnings.warn(
-                    "Bias could not be initialized with wished init function."
-                    "Instead torch.nn.init.normal_ is chosen."
-                )
-                torch.nn.init.zeros_(p, *params, **kwargs)
+                if p.size(0) > 1:
+                    torch.nn.init.zeros_(p, *params, **kwargs)
+                    warnings.warn(
+                        "Bias could not be initialized with wished init function."
+                        "Instead torch.nn.init.zeros_ is chosen."
+                    )
+                else:
+                    warnings.warn(
+                        "Parameter could not be initialized with wished init function."
+                        "Instead keep parameter of original model."
+                    )
+
         else:
             init_func(p, *params, **kwargs)
 
@@ -132,9 +138,7 @@ class Ensemble(torch.nn.Module):
         self.models = torch.nn.ModuleList()
         if list(orig_model.named_buffers()):
             pruning = True
-            assert (
-                self.sparsity > 0.0
-            ) != self.keep_pruning_mask, "It is either possible that sparsity > 0 or keep_pruning = True, but not both."
+            assert not (self.sparsity > 0.0 and self.keep_pruning_mask), "It is either possible that sparsity > 0 or keep_pruning = True, but not both."
         else:
             pruning = False
 
@@ -158,7 +162,9 @@ class Ensemble(torch.nn.Module):
             # Apply pruning to the models if the original model had pruned weights
             if pruning:
                 for name, mask in pruned_weights:
-                    object_to_prune = operator.attrgetter(name[:10])(self.models[i])
+                    object_to_prune = operator.attrgetter(
+                        name[: name.index("weight") - 1]
+                    )(self.models[i])
                     if self.keep_pruning_mask:
                         prune.custom_from_mask(object_to_prune, "weight", mask)
                     elif self.sparsity > 0:
@@ -166,13 +172,12 @@ class Ensemble(torch.nn.Module):
                             object_to_prune, "weight", self.sparsity
                         )
                     else:
-                        ValueError(
+                        raise ValueError(
                             "If the orig_model has pruned weights, sparsity should be greater than 0 "
                             "or keep_pruning_mask should be True."
                         )
 
     def forward(self, *input: Union[torch.Tensor, Tuple[torch.Tensor]]) -> torch.Tensor:
-
         """
         Forward passing function of the module. Passes input through all instances of the
         given model and returns a torch.Tensor with an additional dimension.
@@ -196,6 +201,15 @@ class Ensemble(torch.nn.Module):
         else:
             outs = [model(*input) for model in self.models]
 
+        if isinstance(outs[0], tuple):
+            return tuple(
+                self.get_final_output([out[j] for out in outs])
+                for j in range(len(outs[0]))
+            )
+        else:
+            return self.get_final_output(outs)
+
+    def get_final_output(self, outs):
         outs = torch.stack(outs)
         if self.combination_type == "mean":
             combined_output = torch.mean(outs, dim=0, keepdim=True)
@@ -216,8 +230,8 @@ class Ensemble(torch.nn.Module):
         """
         if self.combination_type not in ["mean", "median"]:
             raise ValueError(
-                '"{}" is not a valid type for combination. '
-                'It must be either "mean" or "median".'.format(self.combination_type)
+                f"{self.combination_type} is not a valid type for combination. "
+                "It must be either 'mean' or 'median'."
             )
 
     def set(self, variable: str, value) -> None:

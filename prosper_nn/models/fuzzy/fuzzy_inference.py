@@ -1,4 +1,3 @@
-""""""
 """
 Prosper_nn provides implementations for specialized time series forecasting
 neural networks and related utility functions.
@@ -130,7 +129,7 @@ class FuzzyInference(torch.nn.Module):
             prune.custom_from_mask(
                 self.consequences, "weight", self.classification_matrix
             )
-            self.consequences.register_backward_hook(
+            self.consequences.register_full_backward_hook(
                 self.clamp_and_normalize_consequences_backward
             )
             self.consequences.register_forward_pre_hook(
