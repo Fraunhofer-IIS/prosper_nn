@@ -33,8 +33,8 @@ fredmd_test = Dataset_Fredmd(
     forecast_horizon,
     split_date=train_test_split_period,
     data_type="test",
-    target=target,
 )
+fredmd_test.target = target
 
 # %% Visualization of the ECNN ensemble Heatmap
 
@@ -68,8 +68,8 @@ visualize_forecasts.heatmap_forecasts(
     forecasts.squeeze(2),
     start_point=start_point,
     sigma=0.25,
-    num_interp=30,
-    window_height=200,
+    num_interp=100,
+    window_height=1000,
     xlabel="Forecast step",
     save_at=Path(__file__).parent / f"heatmap_{target}.pdf",
     title="Heatmap ensemble forecast",
