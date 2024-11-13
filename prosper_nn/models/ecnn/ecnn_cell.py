@@ -43,7 +43,7 @@ class ECNNCell(nn.Module):
         n_features_U: int,
         n_state_neurons: int,
         n_features_Y: int = 1,
-        recurrent_cell_type: str = "elman",
+        cell_type: str = "elman",
         kwargs_recurrent_cell: dict = {},
     ):
         """
@@ -58,7 +58,7 @@ class ECNNCell(nn.Module):
         n_features_Y: int
             The number of outputs, i.e. the number of elements of Y at each time
             step. The default is 1.
-        recurrent_cell_type: str
+        cell_type: str
             Select the cell for the state transition. The cells elman, lstm, gru
             (all from pytorch) and gru_3_variant (from prosper_nn) are supported.
         kwargs_recurrent_cell: dict
@@ -73,17 +73,17 @@ class ECNNCell(nn.Module):
 
         self.C = nn.Linear(n_state_neurons, n_features_Y, bias=False)
 
-        if recurrent_cell_type == "elman":
+        if cell_type == "elman":
             self.recurrent_cell = nn.RNNCell
-        elif recurrent_cell_type == "lstm":
+        elif cell_type == "lstm":
             self.recurrent_cell = nn.LSTMCell
-        elif recurrent_cell_type == "gru":
+        elif cell_type == "gru":
             self.recurrent_cell = nn.GRUCell
-        elif recurrent_cell_type == "gru_3_variant":
+        elif cell_type == "gru_3_variant":
             self.recurrent_cell = GRU_3_variant
         else:
             raise ValueError(
-                f"recurrent_cell_type: {recurrent_cell_type} is not known."
+                f"cell_type: {cell_type} is not known."
                 "Choose from elman, lstm, gru or gru_3_variant."
             )
         self.recurrent_cell = self.recurrent_cell(

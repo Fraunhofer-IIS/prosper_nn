@@ -42,7 +42,7 @@ ecnn = ecnn.ECNN(
     n_state_neurons,
     past_horizon,
     forecast_horizon,
-    recurrent_cell_type="gru",
+    cell_type="gru",
     approach="backward",
     learn_init_state=True,
     n_features_Y=n_features_Y,
