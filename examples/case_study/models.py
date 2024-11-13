@@ -24,7 +24,7 @@ class Benchmark_RNN(nn.Module):
         n_state_neurons: int,
         n_features_Y: int,
         forecast_horizon: int,
-        recurrent_cell_type: str,
+        cell_type: str,
     ):
         super(Benchmark_RNN, self).__init__()
         self.multivariate = False
@@ -32,7 +32,7 @@ class Benchmark_RNN(nn.Module):
         self.n_features_Y = n_features_Y
         self.forecast_horizon = forecast_horizon
         self.n_state_neurons = n_state_neurons
-        self.recurrent_cell_type = recurrent_cell_type
+        self.cell_type = cell_type
 
         self.cell = self.get_recurrent_cell()
         self.rnn = self.cell(input_size=n_features_U, hidden_size=n_state_neurons)
@@ -50,7 +50,7 @@ class Benchmark_RNN(nn.Module):
 
     def set_init_state(self) -> Union[nn.Parameter, Tuple[nn.Parameter, nn.Parameter]]:
         dtype = torch.float64
-        if self.recurrent_cell_type == "lstm":
+        if self.cell_type == "lstm":
             init_state = (
                 nn.Parameter(
                     torch.rand(1, self.n_state_neurons, dtype=dtype), requires_grad=True
@@ -66,22 +66,22 @@ class Benchmark_RNN(nn.Module):
         return init_state
 
     def get_recurrent_cell(self) -> nn.Module:
-        if self.recurrent_cell_type == "elman":
+        if self.cell_type == "elman":
             cell = nn.RNN
-        elif self.recurrent_cell_type == "gru":
+        elif self.cell_type == "gru":
             cell = nn.GRU
-        elif self.recurrent_cell_type == "lstm":
+        elif self.cell_type == "lstm":
             cell = nn.LSTM
         else:
             raise ValueError(
-                f"recurrent_cell_type {self.recurrent_cell_type} not available."
+                f"cell_type {self.cell_type} not available."
             )
         return cell
 
     def repeat_init_state(
         self, batchsize: int
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        if self.recurrent_cell_type == "lstm":
+        if self.cell_type == "lstm":
             return self.init_state[0].repeat(batchsize, 1).unsqueeze(
                 0
             ), self.init_state[1].repeat(batchsize, 1).unsqueeze(0)
@@ -117,7 +117,7 @@ class RNN_direct(Benchmark_RNN):
         n_state_neurons: int,
         n_features_Y: int,
         forecast_horizon: int,
-        recurrent_cell_type: str,
+        cell_type: str,
     ):
         self.forecast_method = "direct"
         self.output_size_linear_decoder = n_features_Y * forecast_horizon
@@ -126,7 +126,7 @@ class RNN_direct(Benchmark_RNN):
             n_state_neurons,
             n_features_Y,
             forecast_horizon,
-            recurrent_cell_type,
+            cell_type,
         )
 
     def forward(self, features_past: torch.Tensor) -> torch.Tensor:
@@ -161,7 +161,7 @@ class RNN_recursive(Benchmark_RNN):
         n_state_neurons: int,
         n_features_Y: int,
         forecast_horizon: int,
-        recurrent_cell_type: str,
+        cell_type: str,
     ):
         self.forecast_method = "recursive"
         self.output_size_linear_decoder = n_features_Y
@@ -170,7 +170,7 @@ class RNN_recursive(Benchmark_RNN):
             n_state_neurons,
             n_features_Y,
             forecast_horizon,
-            recurrent_cell_type,
+            cell_type,
         )
 
     def forward(self, features_past: torch.Tensor) -> torch.Tensor:
@@ -207,7 +207,7 @@ class RNN_S2S(Benchmark_RNN):
         n_state_neurons: int,
         n_features_Y: int,
         forecast_horizon: int,
-        recurrent_cell_type: str,
+        cell_type: str,
     ):
         self.forecast_method = "s2s"
         self.output_size_linear_decoder = n_features_Y
@@ -216,7 +216,7 @@ class RNN_S2S(Benchmark_RNN):
             n_state_neurons,
             n_features_Y,
             forecast_horizon,
-            recurrent_cell_type,
+            cell_type,
         )
         self.decoder = self.cell(input_size=n_features_U, hidden_size=n_state_neurons)
 
@@ -366,16 +366,16 @@ def init_models(
 
     # Compare to further Recurrent Neural Networks
     for forecast_module in [RNN_direct, RNN_recursive, RNN_S2S]:
-        for recurrent_cell_type in ["elman", "gru", "lstm"]:
+        for cell_type in ["elman", "gru", "lstm"]:
             model = forecast_module(
                 n_features_U,
                 n_state_neurons,
                 n_features_Y,
                 forecast_horizon,
-                recurrent_cell_type,
+                cell_type,
             )
             ensemble = init_ensemble(model, n_models)
-            benchmark_models[f"{recurrent_cell_type}_{model.forecast_method}"] = (
+            benchmark_models[f"{cell_type}_{model.forecast_method}"] = (
                 ensemble
             )
 

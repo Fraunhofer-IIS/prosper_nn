@@ -67,7 +67,7 @@ class ECNN(torch.nn.Module):
         n_state_neurons: int,
         past_horizon: int,
         forecast_horizon: int = 1,
-        recurrent_cell_type: str = "elman",
+        cell_type: str = "elman",
         kwargs_recurrent_cell: dict = {},
         approach: str = "backward",
         learn_init_state: bool = True,
@@ -88,7 +88,7 @@ class ECNN(torch.nn.Module):
             prediction.
         forecast_horizon: int
             The forecast horizon.
-        recurrent_cell_type: str
+        cell_type: str
             Possible choices: elman, lstm, gru or gru_3_variant.
         kwargs_recurrent_cell: dict
             Parameters for the recurrent cell. Activation function can be set here.
@@ -124,24 +124,24 @@ class ECNN(torch.nn.Module):
         self.approach = approach
         self.future_U = future_U
         self.learn_init_state = learn_init_state
-        self.recurrent_cell_type = recurrent_cell_type
+        self.cell_type = cell_type
 
         self._check_variables()
 
-        if recurrent_cell_type == 'lstm':
+        if cell_type == 'lstm':
             self.state = ([(torch.tensor, torch.tensor)] * (past_horizon + forecast_horizon + 1))
         else:
             self.state = [torch.tensor] * (past_horizon + forecast_horizon + 1)
 
         self.ECNNCell = ecnn_cell.ECNNCell(
-                n_features_U, n_state_neurons, n_features_Y, recurrent_cell_type, kwargs_recurrent_cell
+                n_features_U, n_state_neurons, n_features_Y, cell_type, kwargs_recurrent_cell
             )
 
         self.init_state = self.set_init_state()
 
 
     def set_init_state(self):
-        if self.recurrent_cell_type == 'lstm':
+        if self.cell_type == 'lstm':
             init_state = (nn.Parameter(
                 torch.rand(1, self.n_state_neurons), requires_grad=self.learn_init_state
             ), nn.Parameter(
@@ -250,7 +250,7 @@ class ECNN(torch.nn.Module):
         return torch.cat((past_error, forecast), dim=0)
 
     def repeat_init_state(self, batchsize):
-        if self.recurrent_cell_type == 'lstm':
+        if self.cell_type == 'lstm':
             return self.init_state[0].repeat(batchsize, 1), self.init_state[1].repeat(batchsize, 1)
         else:
             return self.init_state.repeat(batchsize, 1)
