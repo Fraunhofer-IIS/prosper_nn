@@ -17,7 +17,7 @@ Afterwards you can import prosper_nn with:
 
 ## Contribution
 
-Everyone is invited to contribute to the package. If you want to do so, prior to creating a pull request, please download the [contributor license agreement](docs/source/contriubte/prosper_nn_cla.pdf).
+Everyone is invited to contribute to the package. If you want to do so, prior to creating a pull request, please download the [contributor license agreement](docs/source/contribute/prosper_nn_cla.pdf).
 After you signed the file, please send it to prosper_nn@iis.fraunhofer.de. Afterwards, the maintainer will consider your pull request.
 
 ## Acknowledgments
