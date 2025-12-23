@@ -33,7 +33,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup Pages
-        uses: actions/configure-pages@v2
+        uses: actions/configure-pages@v3
       - uses: r-lib/actions/setup-pandoc@v2
         with:
           pandoc-version: "2.17.1"
@@ -55,6 +55,8 @@ jobs:
         with:
           # Upload entire repository
           path: "docs/source/_build/"
+      - name: Wait for artifact
+          run: sleep 5
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
